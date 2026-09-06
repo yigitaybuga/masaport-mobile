@@ -10,7 +10,7 @@ struct RestaurantCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             ZStack(alignment: .topLeading) {
-                MPRemoteImage(url: .media(listing.image))
+                MPRemoteImage(url: .media(listing.image), role: .card)
                     .aspectRatio(16 / 10, contentMode: .fit)
                     .clipShape(RoundedRectangle(cornerRadius: MP.cardRadius, style: .continuous))
 
@@ -71,7 +71,7 @@ struct RestaurantTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            MPRemoteImage(url: .media(listing.image))
+            MPRemoteImage(url: .media(listing.image), role: .card)
                 .frame(width: width, height: width * 0.68)
                 .clipShape(RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
                 .overlay(alignment: .topTrailing) {

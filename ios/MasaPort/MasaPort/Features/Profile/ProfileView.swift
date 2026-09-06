@@ -131,7 +131,7 @@ struct FavoriteRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MPRemoteImage(url: .media(item.image), placeholderSymbol: item.kind == .event ? "ticket" : "fork.knife")
+            MPRemoteImage(url: .media(item.image), placeholderSymbol: item.kind == .event ? "ticket" : "fork.knife", role: .thumbnail)
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {

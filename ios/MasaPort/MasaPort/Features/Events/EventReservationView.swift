@@ -219,7 +219,7 @@ private struct EventReservationContent: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 12) {
-                    MPRemoteImage(url: .media(viewModel.event.imageUrl), placeholderSymbol: "ticket")
+                    MPRemoteImage(url: .media(viewModel.event.imageUrl), placeholderSymbol: "ticket", role: .thumbnail)
                         .frame(width: 64, height: 80)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {

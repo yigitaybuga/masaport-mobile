@@ -6,7 +6,7 @@ struct EventCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket")
+            MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket", role: .card)
                 .frame(width: 104, height: 128)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
@@ -46,7 +46,7 @@ struct EventTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket")
+            MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket", role: .card)
                 .frame(width: width, height: width * 1.15)
                 .clipShape(RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
                 .overlay(alignment: .bottomLeading) {

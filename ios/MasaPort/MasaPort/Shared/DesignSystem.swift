@@ -81,11 +81,12 @@ struct MPRemoteImage: View {
     let url: URL?
     var contentMode: ContentMode = .fill
     var placeholderSymbol = "fork.knife"
+    var role: MPImageRole = .card
 
     var body: some View {
         Color.clear
             .overlay {
-                if let url {
+                if let url = MPImageURL.variantURL(for: url, role: role) {
                     AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.25))) { phase in
                         switch phase {
                         case .success(let image):

@@ -67,7 +67,7 @@ struct ReservationTicketView: View {
 
     private var ticketCard: some View {
         VStack(alignment: .leading, spacing: 0) {
-            MPRemoteImage(url: .media(reservation.image), placeholderSymbol: reservation.kind == .event ? "ticket" : "fork.knife")
+            MPRemoteImage(url: .media(reservation.image), placeholderSymbol: reservation.kind == .event ? "ticket" : "fork.knife", role: .thumbnail)
                 .frame(height: 160)
                 .frame(maxWidth: .infinity)
                 .overlay(alignment: .topTrailing) {

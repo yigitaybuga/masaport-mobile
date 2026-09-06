@@ -249,7 +249,7 @@ struct SearchListingRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MPRemoteImage(url: .media(listing.image))
+            MPRemoteImage(url: .media(listing.image), role: .card)
                 .frame(width: 72, height: 72)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {

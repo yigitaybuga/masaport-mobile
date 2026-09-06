@@ -134,7 +134,7 @@ struct RestaurantDetailView: View {
                             ScrollView(.horizontal) {
                                 HStack(spacing: 10) {
                                     ForEach(gallery, id: \.self) { item in
-                                        MPRemoteImage(url: .media(item))
+                                        MPRemoteImage(url: .media(item), role: .detail)
                                             .frame(width: 180, height: 130)
                                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                     }
@@ -166,7 +166,7 @@ struct RestaurantDetailView: View {
     }
 
     private func hero(_ detail: ListingDetail) -> some View {
-        MPRemoteImage(url: .media(detail.heroImage ?? detail.coverImage))
+        MPRemoteImage(url: .media(detail.heroImage ?? detail.coverImage), role: .hero)
             .frame(height: 340)
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottom) {
@@ -191,7 +191,7 @@ struct RestaurantDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 12) {
                 if let logo = URL.media(detail.venue?.logo) {
-                    MPRemoteImage(url: logo, contentMode: .fit)
+                    MPRemoteImage(url: logo, contentMode: .fit, role: .logo)
                         .frame(width: 52, height: 52)
                         .background(MP.card)
                         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

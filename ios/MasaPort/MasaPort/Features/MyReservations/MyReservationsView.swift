@@ -156,7 +156,7 @@ struct ReservationRow: View {
                     .monospacedDigit()
             }
             .frame(width: 44)
-            MPRemoteImage(url: .media(reservation.image), placeholderSymbol: reservation.kind == .event ? "ticket" : "fork.knife")
+            MPRemoteImage(url: .media(reservation.image), placeholderSymbol: reservation.kind == .event ? "ticket" : "fork.knife", role: .thumbnail)
                 .frame(width: 52, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {

@@ -74,7 +74,7 @@ struct EventDetailView: View {
     private func content(_ event: EventDetail) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket")
+                MPRemoteImage(url: .media(event.imageUrl), placeholderSymbol: "ticket", role: .hero)
                     .frame(height: 380)
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .bottom) {

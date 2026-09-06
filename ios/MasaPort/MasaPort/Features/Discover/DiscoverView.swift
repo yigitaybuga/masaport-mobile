@@ -305,7 +305,7 @@ struct CollectionTile: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            MPRemoteImage(url: .media(card.displayImage), placeholderSymbol: "square.stack")
+            MPRemoteImage(url: .media(card.displayImage), placeholderSymbol: "square.stack", role: .card)
                 .frame(width: width, height: width * 0.6)
             LinearGradient(
                 stops: [.init(color: .clear, location: 0.3), .init(color: .black.opacity(0.35), location: 0.6), .init(color: .black.opacity(0.88), location: 1)],
@@ -343,7 +343,7 @@ struct CuisineTile: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            MPRemoteImage(url: .media(card.displayImage), placeholderSymbol: "leaf")
+            MPRemoteImage(url: .media(card.displayImage), placeholderSymbol: "leaf", role: .card)
                 .frame(width: 52, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {

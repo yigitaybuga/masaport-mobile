@@ -259,7 +259,7 @@ private struct ReservationFlowContent: View {
 
     private var venueHeader: some View {
         HStack(spacing: 12) {
-            MPRemoteImage(url: .media(viewModel.context.image))
+            MPRemoteImage(url: .media(viewModel.context.image), role: .thumbnail)
                 .frame(width: 64, height: 64)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {

@@ -38,6 +38,29 @@ struct ModelDecodingTests {
     }
 }
 
+struct MPImageURLTests {
+    @Test func selectsRoleSpecificR2Sibling() throws {
+        let source = try #require(URL(string: "https://cdn.masaport.com/listings/uuid/photo-hero.webp"))
+        #expect(MPImageURL.variantURL(for: source, role: .thumbnail)?.absoluteString == "https://cdn.masaport.com/listings/uuid/photo-thumb.webp")
+        #expect(MPImageURL.variantURL(for: source, role: .card)?.absoluteString == "https://cdn.masaport.com/listings/uuid/photo-card.webp")
+        #expect(MPImageURL.variantURL(for: source, role: .detail)?.absoluteString == source.absoluteString)
+        #expect(MPImageURL.variantURL(for: source, role: .logo)?.absoluteString == "https://cdn.masaport.com/listings/uuid/photo-thumb.webp")
+    }
+
+    @Test func preservesLegacyExternalAndParameterizedURLs() throws {
+        let values = [
+            "https://cdn.masaport.com/legacy/photo.webp",
+            "https://cdn.masaport.com/photo-hero.webp?width=400",
+            "https://images.example.com/photo-hero.webp",
+            "/images/photo.webp",
+        ]
+        for value in values {
+            let url = try #require(URL(string: value))
+            #expect(MPImageURL.variantURL(for: url, role: .card)?.absoluteString == value)
+        }
+    }
+}
+
 struct CustomerAccountTests {
     @Test func decodesProfileFieldsAndToleratesLegacyPayload() throws {
         let full = #"{"id":5,"name":"Ada Lovelace","email":"a@b.co","phone":null,"email_verified":true,"marketing_consent":false,"birth_date":"1990-05-17","preferences":{"dietary":["vegan"],"seating":[]},"created_at":"2026-09-05T11:59:04.239Z"}"#
