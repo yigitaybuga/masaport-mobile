@@ -1,0 +1,32 @@
+# macOS and Xcode user state
+.DS_Store
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+
+# Xcode build products and local derived data
+DerivedData/
+build/
+Build/
+*.ipa
+*.app.dSYM
+*.dSYM
+
+# Swift Package Manager caches and resolved local state
+.build/
+Packages/
+
+# Dependency managers
+Pods/
+Carthage/Build/
+
+# Local-only configuration and secrets
+Configuration/*.local.xcconfig
+.env
+.env.*
+!.env.example
+
+# Test and coverage output
+*.xccovreport
+*.xcresult
+coverage/

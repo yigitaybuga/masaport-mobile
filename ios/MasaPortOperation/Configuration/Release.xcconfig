@@ -1,0 +1,2 @@
+MASAPORT_API_BASE_URL = https:/$()/api.masaport.com/api
+PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation
