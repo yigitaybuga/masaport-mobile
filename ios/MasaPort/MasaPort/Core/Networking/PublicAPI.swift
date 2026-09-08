@@ -152,7 +152,11 @@ final class PublicAPI {
     }
 
     func event(id: Int) async throws -> EventDetail {
-        try await client.get("/events/\(id)/public")
+        try await event(identifier: String(id))
+    }
+
+    func event(identifier: String) async throws -> EventDetail {
+        try await client.get("/events/\(identifier)/public")
     }
 
     func createEventReservation(eventId: Int, instanceId: Int, request: EventReservationRequest) async throws -> EventReservationCreated {

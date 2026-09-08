@@ -12,18 +12,30 @@ final class EventDetailViewModel {
 
     init(api: PublicAPI = .shared) { self.api = api }
 
-    func load(id: Int) async {
+    func load(identifier: String) async {
         do {
-            event = try await api.event(id: id)
+            event = try await api.event(identifier: identifier)
             phase = .loaded
         } catch {
             phase = .failed((error as? APIError)?.message ?? error.localizedDescription)
         }
     }
+
+    func load(id: Int) async {
+        await load(identifier: String(id))
+    }
 }
 
 struct EventDetailView: View {
-    let eventID: Int
+    let eventIdentifier: String
+
+    init(eventID: Int) {
+        eventIdentifier = String(eventID)
+    }
+
+    init(identifier: String) {
+        eventIdentifier = identifier
+    }
 
     @Environment(AppModel.self) private var model
     @State private var viewModel = EventDetailViewModel()
@@ -39,7 +51,7 @@ struct EventDetailView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             case .failed(let message):
                 MPEmptyState(systemImage: "exclamationmark.triangle", title: "Etkinlik yüklenemedi", message: message, actionTitle: "Tekrar dene") {
-                    Task { await viewModel.load(id: eventID) }
+                    Task { await viewModel.load(identifier: eventIdentifier) }
                 }
             case .loaded:
                 if let event = viewModel.event { content(event) }
@@ -68,7 +80,7 @@ struct EventDetailView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
-        .task { await viewModel.load(id: eventID) }
+        .task { await viewModel.load(identifier: eventIdentifier) }
     }
 
     private func content(_ event: EventDetail) -> some View {

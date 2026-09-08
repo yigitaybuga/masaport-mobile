@@ -33,7 +33,7 @@ struct DiscoverView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                MPBrandMark(size: 28)
+                MPWordmark()
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

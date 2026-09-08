@@ -132,7 +132,7 @@ private struct ReservationFlowContent: View {
             Button {
                 viewModel.continueToDetails()
             } label: {
-                Text(viewModel.requiresWebHandoff ? "Ödeme ile devam et" : "Devam et")
+                Text("Devam et")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }
@@ -231,7 +231,11 @@ private struct ReservationFlowContent: View {
             } label: {
                 HStack {
                     if viewModel.isSubmitting { ProgressView().tint(MP.onBrand) }
-                    Text(viewModel.isSubmitting ? "Gönderiliyor" : "Rezervasyonu tamamla")
+                    Text(
+                        viewModel.isSubmitting
+                            ? "Hazırlanıyor"
+                            : viewModel.requiresWebHandoff ? "Ödemeye geç" : "Rezervasyonu tamamla"
+                    )
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)

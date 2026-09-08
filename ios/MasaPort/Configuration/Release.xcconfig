@@ -1,4 +1,4 @@
 MASAPORT_API_BASE_URL = https:/$()/api.masaport.com/api
-MASAPORT_WEB_BASE_URL = https:/$()/masaport.com
+MASAPORT_WEB_BASE_URL = https:/$()/www.masaport.com
 MASAPORT_BOOKING_BASE_URL = https:/$()/app.masaport.com
 PRODUCT_BUNDLE_IDENTIFIER = com.masaport.app

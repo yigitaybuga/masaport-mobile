@@ -3,6 +3,27 @@ import Testing
 @testable import MasaPort
 
 struct ModelDecodingTests {
+    @Test func parsesCanonicalUniversalLinks() throws {
+        let restaurant = try #require(URL(string: "https://masaport.com/istanbul/restoranlar/test-mekan"))
+        #expect(AppDeepLink.parse(restaurant) == .listing(slug: "test-mekan"))
+
+        let event = try #require(URL(string: "https://www.masaport.com/etkinlikler/yaz-konseri"))
+        #expect(AppDeepLink.parse(event) == .event(identifier: "yaz-konseri"))
+    }
+
+    @Test func parsesCustomSchemeLinks() throws {
+        let restaurant = try #require(URL(string: "masaport://restaurant/test-mekan"))
+        #expect(AppDeepLink.parse(restaurant) == .listing(slug: "test-mekan"))
+
+        let event = try #require(URL(string: "masaport://event/42"))
+        #expect(AppDeepLink.parse(event)?.route == .event(id: 42))
+    }
+
+    @Test func ignoresUnrelatedLinks() throws {
+        let url = try #require(URL(string: "https://example.com/restaurant/test-mekan"))
+        #expect(AppDeepLink.parse(url) == nil)
+    }
+
     @Test func decodesDecimalStringsAndNumbers() throws {
         let json = #"{"id":1,"name":"Test","slug":"test","rating":"4.80000000","latitude":"41.02","longitude":29.01}"#
         let card = try JSONDecoder().decode(ListingCard.self, from: Data(json.utf8))
@@ -16,6 +37,29 @@ struct ModelDecodingTests {
         let response = try JSONDecoder().decode(ReservationCreateResponse.self, from: Data(json.utf8))
         #expect(response.data?.reservationId == 7)
         #expect(response.data?.needsPayment == false)
+    }
+
+    @Test func encodesAndDecodesAuthenticatedPaymentHandoff() throws {
+        var request = ReservationRequest(
+            venueId: 1,
+            customerName: "Ada Lovelace",
+            customerPhone: "+905551112233",
+            customerEmail: "ada@example.com",
+            reservationDate: "2026-09-09",
+            guestCount: 2,
+            timeSlotId: 42,
+            note: "Pencere kenarı",
+            kvkkConsent: true
+        )
+        request.paymentHandoff = true
+        let requestObject = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
+        #expect(requestObject["payment_handoff"] as? Bool == true)
+
+        let json = #"{"success":true,"data":{"requires_payment":true,"amount":500,"reservationHoldId":77,"reservationHoldUuid":"0f8fad5b-d9cb-469f-a165-70867728950e","holdExpiresAt":"2026-09-09T17:15:00.000Z"}}"#
+        let response = try JSONDecoder().decode(ReservationCreateResponse.self, from: Data(json.utf8))
+        #expect(response.data?.needsPayment == true)
+        #expect(response.data?.reservationHoldId == 77)
+        #expect(response.data?.reservationHoldUuid == "0f8fad5b-d9cb-469f-a165-70867728950e")
     }
 
     @Test func weekendRangeStartsOnSaturday() {
@@ -95,6 +139,58 @@ struct CustomerAccountTests {
         let session = try #require(envelope.sessions.first)
         #expect(session.symbolName == "desktopcomputer")
         #expect(session.lastUsedDate != nil)
+    }
+
+    @Test func webReservationHandoffPrefillsAccountWithoutPuttingPIIInQuery() throws {
+        let slot = PublicSlot(
+            id: 42,
+            startTime: "20:00",
+            endTime: "22:00",
+            durationMinutes: 120,
+            bookingMode: "STANDARD",
+            requiresManualApproval: false,
+            bookingMessage: nil,
+            minimumSpendRequired: false,
+            minimumSpendSummary: nil,
+            prepaymentRequired: true,
+            prepaymentSummary: "Toplam 500 TL",
+            prepaymentTotalAmount: APINumber(500)
+        )
+        let url = AppConfiguration.webReservationURL(
+            venueID: 1,
+            date: "2026-09-09",
+            guestCount: 2,
+            slot: slot,
+            customerName: "Ada Lovelace",
+            customerPhone: "+90 555 111 22 33",
+            customerEmail: "ada@example.com",
+            note: "Pencere kenarı",
+            paymentOnly: true,
+            reservationHoldID: 77,
+            reservationHoldUUID: "0f8fad5b-d9cb-469f-a165-70867728950e",
+            holdExpiresAt: "2026-09-09T17:15:00.000Z"
+        )
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let queryItems = try #require(components.queryItems)
+        let queryNames = Set(queryItems.map(\.name))
+
+        #expect(queryNames.isDisjoint(with: ["customer_name", "customer_phone", "customer_email"]))
+        #expect(queryItems.first { $0.name == "guestCount" }?.value == "2")
+        #expect(queryItems.first { $0.name == "start_time" }?.value == "20:00")
+        #expect(queryItems.first { $0.name == "timeSlotId" }?.value == "42")
+        #expect(queryItems.first { $0.name == "payment_only" }?.value == "true")
+        #expect(queryItems.first { $0.name == "prepayment_total_amount" }?.value == "500.0")
+
+        var fragmentComponents = URLComponents()
+        fragmentComponents.percentEncodedQuery = components.percentEncodedFragment
+        let fragmentItems = try #require(fragmentComponents.queryItems)
+        #expect(fragmentItems.first { $0.name == "customer_name" }?.value == "Ada Lovelace")
+        #expect(fragmentItems.first { $0.name == "customer_phone" }?.value == "+90 555 111 22 33")
+        #expect(fragmentItems.first { $0.name == "customer_email" }?.value == "ada@example.com")
+        #expect(fragmentItems.first { $0.name == "reservation_note" }?.value == "Pencere kenarı")
+        #expect(fragmentItems.first { $0.name == "hold_id" }?.value == "77")
+        #expect(fragmentItems.first { $0.name == "hold_uuid" }?.value == "0f8fad5b-d9cb-469f-a165-70867728950e")
+        #expect(fragmentItems.first { $0.name == "hold_expires_at" }?.value == "2026-09-09T17:15:00.000Z")
     }
 }
 

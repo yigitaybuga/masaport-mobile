@@ -4,10 +4,69 @@ import SwiftUI
 enum AppRoute: Hashable {
     case listing(slug: String)
     case event(id: Int)
+    case event(identifier: String)
     case listings(ListingsPreset)
     case events(EventsPreset)
     case favorites
     case reservation(SavedReservation)
+}
+
+enum AppDeepLink: Hashable {
+    case listing(slug: String)
+    case event(identifier: String)
+
+    var tab: AppTab {
+        switch self {
+        case .listing: .restaurants
+        case .event: .events
+        }
+    }
+
+    var route: AppRoute {
+        switch self {
+        case .listing(let slug): .listing(slug: slug)
+        case .event(let identifier):
+            if let id = Int(identifier) {
+                .event(id: id)
+            } else {
+                .event(identifier: identifier)
+            }
+        }
+    }
+
+    /// Supports both the app's custom scheme and the canonical masaport.com paths.
+    static func parse(_ url: URL) -> Self? {
+        let scheme = url.scheme?.lowercased()
+        let host = url.host?.lowercased()
+        let isAppScheme = scheme == "masaport"
+        let isWebLink = (scheme == "http" || scheme == "https") &&
+            (host == "masaport.com" || host == "www.masaport.com")
+        guard isAppScheme || isWebLink else { return nil }
+
+        var segments: [String] = []
+        if isAppScheme, let host {
+            segments.append(host)
+        }
+        segments += url.path.split(separator: "/").map(String.init)
+
+        guard let first = segments.first else { return nil }
+        if (first == "restaurant" || first == "listing"), let slug = segments.dropFirst().first, !slug.isEmpty {
+            return .listing(slug: slug)
+        }
+        if first == "event", let identifier = segments.dropFirst().first, !identifier.isEmpty {
+            return .event(identifier: identifier)
+        }
+        if segments.count >= 3, segments[1] == "restoranlar", !segments[2].isEmpty {
+            return .listing(slug: segments[2])
+        }
+        if segments.count >= 3, segments[1] == "etkinlikler", !segments[2].isEmpty {
+            return .event(identifier: segments[2])
+        }
+        if first == "etkinlikler", let identifier = segments.dropFirst().first, !identifier.isEmpty {
+            return .event(identifier: identifier)
+        }
+        return nil
+    }
 }
 
 struct ListingsPreset: Hashable {
@@ -84,8 +143,10 @@ extension View {
             switch route {
             case .listing(let slug):
                 RestaurantDetailView(slug: slug)
-            case .event(let id):
+            case .event(id: let id):
                 EventDetailView(eventID: id)
+            case .event(identifier: let identifier):
+                EventDetailView(identifier: identifier)
             case .listings(let preset):
                 RestaurantsView(preset: preset)
             case .events(let preset):

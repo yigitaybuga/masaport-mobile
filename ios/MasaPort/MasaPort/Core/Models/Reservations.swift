@@ -12,6 +12,7 @@ struct ReservationRequest: Encodable {
     let timeSlotId: Int
     let note: String?
     let kvkkConsent: Bool
+    var paymentHandoff = false
     let source = "masaport_ios"
 
     enum CodingKeys: String, CodingKey {
@@ -24,6 +25,7 @@ struct ReservationRequest: Encodable {
         case timeSlotId = "time_slot_id"
         case note, source
         case kvkkConsent = "kvkk_consent"
+        case paymentHandoff = "payment_handoff"
     }
 }
 

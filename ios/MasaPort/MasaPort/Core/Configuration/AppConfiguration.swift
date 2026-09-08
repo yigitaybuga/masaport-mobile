@@ -35,15 +35,56 @@ enum AppConfiguration {
     }
 
     /// Ön ödeme gerektiren restoran rezervasyonları web akışına devredilir.
-    static func webReservationURL(venueID: Int, date: String, startTime: String?, guestCount: Int) -> URL {
+    static func webReservationURL(
+        venueID: Int,
+        date: String,
+        guestCount: Int,
+        slot: PublicSlot?,
+        customerName: String? = nil,
+        customerPhone: String? = nil,
+        customerEmail: String? = nil,
+        note: String? = nil,
+        paymentOnly: Bool = false,
+        reservationHoldID: Int? = nil,
+        reservationHoldUUID: String? = nil,
+        holdExpiresAt: String? = nil
+    ) -> URL {
         var components = URLComponents(url: bookingBaseURL.appending(path: "public/reservation/\(venueID)"), resolvingAgainstBaseURL: false)!
         var items = [
             URLQueryItem(name: "guestCount", value: String(guestCount)),
             URLQueryItem(name: "reservationDate", value: date),
             URLQueryItem(name: "funnel_source", value: "masaport_ios"),
         ]
-        if let startTime { items.append(URLQueryItem(name: "start_time", value: startTime)) }
+        if let slot {
+            items.append(URLQueryItem(name: "timeSlotId", value: String(slot.id)))
+            items.append(URLQueryItem(name: "start_time", value: slot.startTime.shortTime))
+            items.append(URLQueryItem(name: "end_time", value: slot.endTime?.shortTime))
+            items.append(URLQueryItem(name: "prepayment_required", value: String(slot.prepaymentRequired == true)))
+            items.append(URLQueryItem(name: "prepayment_total_amount", value: slot.prepaymentTotalAmount?.value.map { String($0) }))
+            items.append(URLQueryItem(name: "prepayment_summary", value: slot.prepaymentSummary?.nilIfBlank))
+            items.append(URLQueryItem(name: "minimum_spend_required", value: String(slot.minimumSpendRequired == true)))
+            items.append(URLQueryItem(name: "minimum_spend_summary", value: slot.minimumSpendSummary?.nilIfBlank))
+            items.append(URLQueryItem(name: "minimum_duration_minutes", value: slot.durationMinutes.map { String($0) }))
+        }
+        if paymentOnly {
+            items.append(URLQueryItem(name: "payment_only", value: "true"))
+        }
+        items.removeAll { $0.value == nil }
         components.queryItems = items
+
+        // Kişisel bilgileri HTTP isteğine ve sunucu loglarına giren query yerine fragment'te taşı.
+        var privateComponents = URLComponents()
+        privateComponents.queryItems = [
+            URLQueryItem(name: "customer_name", value: customerName?.nilIfBlank),
+            URLQueryItem(name: "customer_email", value: customerEmail?.nilIfBlank),
+            URLQueryItem(name: "customer_phone", value: customerPhone?.nilIfBlank),
+            URLQueryItem(name: "reservation_note", value: note?.nilIfBlank),
+            URLQueryItem(name: "hold_id", value: reservationHoldID.map { String($0) }),
+            URLQueryItem(name: "hold_uuid", value: reservationHoldUUID?.nilIfBlank),
+            URLQueryItem(name: "hold_expires_at", value: holdExpiresAt?.nilIfBlank),
+        ].filter { $0.value != nil }
+        components.percentEncodedFragment = privateComponents.percentEncodedQuery
+
         return components.url!
     }
 

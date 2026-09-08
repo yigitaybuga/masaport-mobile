@@ -50,6 +50,7 @@ final class ReservationViewModel {
     private let api: PublicAPI
     private let preferences: PreferencesStore
     private let canPayInApp: Bool
+    private let account: CustomerAccount?
     private var loadedKey: String?
 
     init(
@@ -67,6 +68,7 @@ final class ReservationViewModel {
         self.api = api
         self.preferences = preferences
         self.canPayInApp = canPayInApp
+        self.account = account
         date = initialDate
         guestCount = initialGuests
         availability = preloadedAvailability
@@ -108,7 +110,7 @@ final class ReservationViewModel {
 
     /// Ön ödeme isteyen slotlarda kart bilgisi gerektiğinden akış web'e devredilir.
     var requiresWebHandoff: Bool {
-        selectedSlot?.slot.prepaymentRequired == true && !canPayInApp
+        selectedSlot?.slot.prepaymentRequired == true && selectedSlot?.slot.isRequestOnly != true && !canPayInApp
     }
 
     func loadAvailability(force: Bool = false) async {
@@ -134,19 +136,27 @@ final class ReservationViewModel {
 
     func continueToDetails() {
         guard selectedSlot != nil else { return }
-        if requiresWebHandoff {
-            outcome = .handedOffToWeb(webHandoffURL)
-            return
-        }
         step = .details
     }
 
     var webHandoffURL: URL {
+        webHandoffURL(hold: nil)
+    }
+
+    private func webHandoffURL(hold: ReservationCreated?) -> URL {
         AppConfiguration.webReservationURL(
             venueID: context.venueId,
             date: DateFormat.apiDay.string(from: date),
-            startTime: selectedSlot?.slot.startTime.shortTime,
-            guestCount: guestCount
+            guestCount: guestCount,
+            slot: selectedSlot?.slot,
+            customerName: name.trimmingCharacters(in: .whitespaces),
+            customerPhone: normalizedPhone,
+            customerEmail: email.trimmingCharacters(in: .whitespaces),
+            note: note,
+            paymentOnly: requiresWebHandoff,
+            reservationHoldID: hold?.reservationHoldId,
+            reservationHoldUUID: hold?.reservationHoldUuid,
+            holdExpiresAt: hold?.holdExpiresAt
         )
     }
 
@@ -163,7 +173,7 @@ final class ReservationViewModel {
             preferences.rememberGuest = false
         }
 
-        let request = ReservationRequest(
+        var request = ReservationRequest(
             venueId: context.venueId,
             customerName: name.trimmingCharacters(in: .whitespaces),
             customerPhone: normalizedPhone,
@@ -174,6 +184,36 @@ final class ReservationViewModel {
             note: note.nilIfBlank,
             kvkkConsent: true
         )
+
+        if requiresWebHandoff {
+            guard account != nil else {
+                outcome = .handedOffToWeb(webHandoffURL)
+                return
+            }
+
+            request.paymentHandoff = true
+            do {
+                let handoff = try await api.createReservation(request)
+                if handoff.requiresPayment == true,
+                   handoff.reservationHoldId != nil,
+                   handoff.reservationHoldUuid != nil {
+                    outcome = .handedOffToWeb(webHandoffURL(hold: handoff))
+                    return
+                }
+
+                let saved = makeSavedReservation(slot: slot, created: handoff)
+                outcome = .confirmed(saved, message: handoff.bookingMessage?.nilIfBlank)
+                step = .done
+            } catch let error as APIError {
+                submitError = error.detail ?? error.message
+                if error.statusCode == 409 {
+                    await loadAvailability(force: true)
+                }
+            } catch {
+                submitError = error.localizedDescription
+            }
+            return
+        }
 
         do {
             let created = try await api.createReservation(request)

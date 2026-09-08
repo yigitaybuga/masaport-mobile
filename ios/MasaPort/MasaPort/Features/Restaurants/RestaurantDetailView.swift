@@ -60,6 +60,8 @@ struct RestaurantDetailView: View {
     @State private var viewModel = RestaurantDetailViewModel()
     @State private var booking: BookingSelection?
     @State private var safari: SafariDestination?
+    @State private var galleryIndex = 0
+    @State private var isGalleryPresented = false
 
     var body: some View {
         Group {
@@ -100,6 +102,12 @@ struct RestaurantDetailView: View {
         .fullScreenCover(item: $safari) { destination in
             SafariView(url: destination.url).ignoresSafeArea()
         }
+        .fullScreenCover(isPresented: $isGalleryPresented) {
+            RestaurantGalleryViewer(
+                images: viewModel.detail?.gallery ?? [],
+                initialIndex: galleryIndex
+            )
+        }
         .task { await viewModel.load(slug: slug) }
     }
 
@@ -133,10 +141,18 @@ struct RestaurantDetailView: View {
                         section("Galeri") {
                             ScrollView(.horizontal) {
                                 HStack(spacing: 10) {
-                                    ForEach(gallery, id: \.self) { item in
-                                        MPRemoteImage(url: .media(item), role: .detail)
-                                            .frame(width: 180, height: 130)
-                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    ForEach(Array(gallery.enumerated()), id: \.offset) { index, item in
+                                        Button {
+                                            galleryIndex = index
+                                            isGalleryPresented = true
+                                        } label: {
+                                            MPRemoteImage(url: .media(item), role: .detail)
+                                                .frame(width: 180, height: 130)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel("Galeri fotoğrafı \(index + 1)")
+                                        .accessibilityHint("Tam ekran görüntülemek için dokunun")
                                     }
                                 }
                             }

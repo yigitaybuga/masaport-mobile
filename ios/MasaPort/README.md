@@ -54,16 +54,34 @@ kullanıcı yeni şifreyle uygulamadan giriş yapar. Favoriler cihazda tutulmaya
 ## Ödeme akışı
 
 Varsayılan sağlayıcı kart bilgisi istediğinden (`requiresCardDetails: true`), ön ödeme gerektiren
-restoran slotları ve ücretli etkinlikler `app.masaport.com` üzerindeki güvenli web akışına
-`SFSafariViewController` ile devredilir. `GET /payments/config` hosted bir sağlayıcı bildirirse
+restoranlarda tarih, saat, kişi ve iletişim bilgileri uygulamada alınır; yalnızca kart ve
+3D Secure adımı `app.masaport.com` üzerindeki güvenli web akışına `SFSafariViewController`
+ile devredilir. Giriş yapılmış kullanıcıda ödeme öncesi masa bekletmesi API üzerinden
+oluşturulur ve kullanıcı hesabına bağlı kalır. Ücretli etkinlikler de aynı güvenli web akışını kullanır.
+`GET /payments/config` hosted bir sağlayıcı bildirirse
 (`requiresCardDetails: false`) uygulama doğrudan `checkoutUrl` açar ve `public-status` ucunu
 yoklayarak sonucu yerel kayda işler. Harici bilet siteleri (`ticket_url`) doğrudan açılır.
 
 ## Ortam
 
-`Configuration/Debug.xcconfig` yerel API'yi (`http://127.0.0.1:3000/api`) kullanır; Release
-`https://api.masaport.com/api`. `MASAPORT_WEB_BASE_URL` paylaşım bağlantıları,
-`MASAPORT_BOOKING_BASE_URL` web'e devredilen ödeme akışları içindir.
+`Configuration/Debug.xcconfig` yerel API'yi (`http://127.0.0.1:3000/api`), public web'i
+(`http://127.0.0.1:3001`) ve web'e devredilen rezervasyon/ödeme akışını
+(`http://localhost:5173`) kullanır. Vite geliştirme sunucusu varsayılan olarak
+IPv6 loopback (`[::1]`) üzerinde dinlediği için rezervasyon adresinde `localhost`
+kullanılır. Bu loopback adresleri iOS Simulator içindir;
+fiziksel cihazda Mac'in ağ adresi veya güvenilir bir HTTPS geliştirme adresi gerekir.
+Release yapılandırması sırasıyla `https://api.masaport.com/api`, `https://www.masaport.com`
+ve `https://app.masaport.com` production adreslerini kullanır.
+
+## Universal Links ve deep link
+
+`https://masaport.com/restaurant/:slug`, `/:city/restoranlar/:slug`,
+`https://masaport.com/etkinlikler/:id|:slug` ve şehirli etkinlik URL'leri uygulama
+yüklüyse ilgili detay ekranını açar; uygulama yoksa aynı web sayfası çalışmaya devam eder.
+İlişkilendirme için `MasaPort/MasaPort.entitlements` içindeki Associated Domains ve
+landing projesindeki `public/.well-known/apple-app-site-association` birlikte deploy
+edilmelidir. `masaport://restaurant/:slug` ve `masaport://event/:id` özel şemaları da
+geriye dönük olarak desteklenir.
 
 ## Demo modu (yalnızca Debug)
 
@@ -93,3 +111,4 @@ xcodebuild -project MasaPort.xcodeproj -scheme MasaPort -destination 'platform=i
 - Release: `com.masaport.app`
 - Debug: `com.masaport.app.debug`
 - URL şeması: `masaport://`
+- Universal Links: `https://masaport.com/...` ve `https://www.masaport.com/...`
