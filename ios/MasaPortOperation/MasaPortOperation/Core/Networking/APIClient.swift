@@ -87,7 +87,7 @@ final class APIClient {
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         let envelope = try? decoder.decode(APIEnvelope<Value>.self, from: data)
 
-        guard (200..<300).contains(statusCode), envelope?.success == true, let value = envelope?.data else {
+        guard (200..<300).contains(statusCode), envelope?.success == true else {
             let fallback = HTTPURLResponse.localizedString(forStatusCode: statusCode)
             throw APIError(
                 statusCode: statusCode,
@@ -97,7 +97,14 @@ final class APIClient {
                 detail: envelope?.message
             )
         }
-        return value
+        if let value = envelope?.data {
+            return value
+        }
+        // Bazı uçlar yalnızca `{ success, message }` döner; boş yanıt bekleyen çağrılar için geçerli sayılır.
+        if let empty = EmptyResponse() as? Value {
+            return empty
+        }
+        throw APIError(statusCode: statusCode, message: "Sunucu beklenen veriyi döndürmedi.", code: nil, requestId: envelope?.requestId)
     }
 
     private func makeURL(path: String) throws -> URL {
@@ -106,5 +113,14 @@ final class APIClient {
             throw APIError(statusCode: 0, message: "Geçersiz API adresi", code: nil, requestId: nil)
         }
         return url
+    }
+}
+
+extension Error {
+    /// Görev iptali (ör. yenileme sırasında ekrandan ayrılma) kullanıcıya hata olarak gösterilmez.
+    var isCancellation: Bool {
+        if self is CancellationError { return true }
+        if let urlError = self as? URLError, urlError.code == .cancelled { return true }
+        return false
     }
 }

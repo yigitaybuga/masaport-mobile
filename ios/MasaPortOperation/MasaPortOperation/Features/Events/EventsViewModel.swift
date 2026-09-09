@@ -22,6 +22,7 @@ final class EventsViewModel: ObservableObject {
         } catch let error as APIError {
             errorMessage = error.message
         } catch {
+            guard !error.isCancellation else { return }
             errorMessage = "Etkinlikler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -63,7 +64,29 @@ final class EventDetailViewModel: ObservableObject {
         } catch let error as APIError {
             errorMessage = error.message
         } catch {
+            guard !error.isCancellation else { return }
             errorMessage = "Katılımcılar yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
+        }
+    }
+
+    func updateNote(_ reservation: EventReservation, note: String, venueID: Int, eventID: Int) async -> Bool {
+        checkingInID = reservation.id
+        errorMessage = nil
+        defer { checkingInID = nil }
+        do {
+            let _: EventReservationNoteResult = try await api.put(
+                "/events/\(venueID)/reservations/\(eventID)/\(reservation.id)/note",
+                body: EventReservationNoteRequest(note: note)
+            )
+            successCount += 1
+            await load(venueID: venueID, eventID: eventID)
+            return true
+        } catch let error as APIError {
+            errorMessage = error.detail ?? error.message
+            return false
+        } catch {
+            errorMessage = "Not kaydedilemedi. Tekrar deneyin."
+            return false
         }
     }
 

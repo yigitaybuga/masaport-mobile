@@ -21,14 +21,20 @@ struct AppRootView: View {
 private struct LaunchingView: View {
     var body: some View {
         ZStack {
-            MP.background.ignoresSafeArea()
-            VStack(spacing: 14) {
-                MPBrandMark(size: 64)
-                Text("MasaPort")
-                    .font(.system(.title3, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Color(.label))
+            MP.heroGradient.ignoresSafeArea()
+            VStack(spacing: 16) {
+                MPBrandTile(size: 76)
+                VStack(spacing: 4) {
+                    Text("MasaPort")
+                        .font(.system(.title2, design: .rounded, weight: .bold))
+                        .foregroundStyle(MP.onHero)
+                    Text("Operasyon")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(MP.onHeroSecondary)
+                }
                 ProgressView()
-                    .padding(.top, 6)
+                    .tint(.white)
+                    .padding(.top, 8)
             }
         }
         .accessibilityElement(children: .combine)

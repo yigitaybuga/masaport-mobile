@@ -8,6 +8,7 @@ struct WaitlistView: View {
     @State private var candidate: WaitlistActionCandidate?
     @State private var completionMessage: String?
     @State private var feedbackTrigger = 0
+    @State private var convertCandidate: WaitlistEntry?
 
     var body: some View {
         Group {
@@ -49,55 +50,62 @@ struct WaitlistView: View {
             Text(completionMessage ?? "")
         }
         .sensoryFeedback(.success, trigger: feedbackTrigger)
+        .sheet(item: $convertCandidate) { entry in
+            if let venueID = session.activeVenue?.id {
+                WalkInView(venueID: venueID, prefill: entry.walkInPrefill) { _ in
+                    Task {
+                        if await model.markConverted(entry, venueID: venueID) {
+                            completionMessage = "\(entry.customerName) walk-in olarak kaydedildi; bekleme kaydı kapatıldı."
+                            feedbackTrigger += 1
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func content(venueID: Int) -> some View {
         List {
-            Section {
-                summary
-                    .mpPlainRow(vertical: 4)
+            summary
+                .mpPlainRow(vertical: 4)
+
+            HStack(spacing: 10) {
+                MPSegmentBar(
+                    segments: WaitlistFilter.allCases.map { MPSegment(id: $0, title: $0.title, count: $0.count(in: model.entries)) },
+                    selection: $selectedFilter
+                )
+                MPLiveIndicator(isConnected: liveUpdates.state == .connected)
             }
+            .mpPlainRow(vertical: 6)
 
             if let errorMessage = model.errorMessage {
-                Section {
-                    MPNotice(message: errorMessage, actionTitle: "Yenile") {
-                        Task { await model.load(venueID: venueID) }
-                    }
-                    .mpPlainRow()
+                MPNotice(message: errorMessage, actionTitle: "Yenile") {
+                    Task { await model.load(venueID: venueID) }
                 }
+                .mpPlainRow(vertical: 4)
             }
 
-            Section {
-                if model.isLoading && model.entries.isEmpty {
-                    MPLoadingRow(title: "Aktif talepler ve teklifler kontrol ediliyor")
-                        .mpPlainRow()
-                } else if filteredEntries.isEmpty {
-                    MPEmptyState(
-                        systemImage: "person.2.badge.checkmark",
-                        title: "Aktif bekleme kaydı yok",
-                        message: selectedFilter == .all
-                            ? "Yeni talepler geldiğinde burada görünecek."
-                            : "Bu durumda bekleyen bir misafir bulunmuyor."
-                    )
+            if model.isLoading && model.entries.isEmpty {
+                MPLoadingRow(title: "Aktif talepler ve teklifler kontrol ediliyor")
                     .mpPlainRow()
-                } else {
+            } else if filteredEntries.isEmpty {
+                MPEmptyState(
+                    systemImage: "person.2.badge.checkmark",
+                    title: "Aktif bekleme kaydı yok",
+                    message: selectedFilter == .all
+                        ? "Yeni talepler geldiğinde burada görünecek."
+                        : "Bu durumda bekleyen bir misafir bulunmuyor."
+                )
+                .mpCard(padding: 0)
+                .mpPlainRow(vertical: 4)
+            } else {
+                Section {
                     ForEach(filteredEntries) { entry in
                         row(entry, venueID: venueID)
                     }
+                } header: {
+                    MPListSectionHeader(title: selectedFilter.title == "Tümü" ? "Talepler" : selectedFilter.title, count: filteredEntries.count)
                 }
-            } header: {
-                HStack(spacing: 10) {
-                    Picker("Filtre", selection: $selectedFilter.animation(.snappy(duration: 0.2))) {
-                        ForEach(WaitlistFilter.allCases) { filter in
-                            Text("\(filter.title) · \(filter.count(in: model.entries))").tag(filter)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    MPLiveIndicator(isConnected: liveUpdates.state == .connected)
-                }
-                .textCase(nil)
-                .padding(.bottom, 6)
-                .listRowInsets(EdgeInsets())
             }
         }
         .listStyle(.insetGrouped)
@@ -121,33 +129,18 @@ struct WaitlistView: View {
 
     private var summary: some View {
         HStack(spacing: 0) {
-            summaryMetric(waitingCount, "Bekleyen", tone: .attention)
+            MPMetric(value: waitingCount, label: "Bekleyen", tone: waitingCount > 0 ? .attention : .neutral)
             summaryDivider
-            summaryMetric(offeredCount, "Teklif gitti", tone: .info)
+            MPMetric(value: offeredCount, label: "Teklif gitti", tone: offeredCount > 0 ? .info : .neutral)
             summaryDivider
-            summaryMetric(totalGuests, "Toplam kişi", tone: .neutral)
+            MPMetric(value: totalGuests, label: "Toplam kişi", tone: .neutral)
         }
         .mpCard(padding: 14)
         .accessibilityElement(children: .combine)
     }
 
     private var summaryDivider: some View {
-        Rectangle().fill(MP.separator).frame(width: 1, height: 32)
-    }
-
-    private func summaryMetric(_ value: Int, _ title: String, tone: MPTone) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value, format: .number)
-                .font(.system(.title2, design: .rounded, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(tone == .neutral ? Color(.label) : tone.color)
-                .contentTransition(.numericText())
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(Color(.secondaryLabel))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
+        Rectangle().fill(MP.hairline).frame(width: 1, height: 32).padding(.trailing, 12)
     }
 
     // MARK: Rows
@@ -157,22 +150,25 @@ struct WaitlistView: View {
         let isBusy = model.actionEntryID == entry.id
 
         return HStack(alignment: .center, spacing: 12) {
-            MPTimeColumn(
+            MPTimeBlock(
                 time: entry.shortTime,
                 caption: entry.shortDate,
-                tone: isOffered ? .info : nil
+                tone: isOffered ? (entry.offerHasExpired ? .critical : .info) : .neutral
             )
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(entry.customerName)
                     .font(.body.weight(.semibold))
                     .lineLimit(1)
-                Text("\(entry.guestCount) kişi · \(entry.waitingText)")
-                    .font(.footnote)
-                    .foregroundStyle(Color(.secondaryLabel))
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    MPTag(text: "\(entry.guestCount) kişi", systemImage: "person.2.fill")
+                    Text(entry.waitingText)
+                        .font(.caption)
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .lineLimit(1)
+                }
                 if let note = entry.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(note)
+                    Label(note, systemImage: "text.quote")
                         .font(.footnote)
                         .foregroundStyle(Color(.secondaryLabel))
                         .lineLimit(2)
@@ -181,14 +177,14 @@ struct WaitlistView: View {
 
             Spacer(minLength: 6)
 
-            VStack(alignment: .trailing, spacing: 7) {
+            VStack(alignment: .trailing, spacing: 8) {
                 if isOffered {
                     MPStatusLabel(
                         status: MPStatus(
                             text: entry.offerExpiryText ?? "Teklif gitti",
                             tone: entry.offerHasExpired ? .critical : .info
                         ),
-                        emphasized: entry.offerHasExpired
+                        emphasized: true
                     )
                 } else {
                     MPStatusLabel(status: MPStatus(text: "Bekliyor", tone: .attention))
@@ -197,20 +193,28 @@ struct WaitlistView: View {
                     } label: {
                         HStack(spacing: 5) {
                             if isBusy {
-                                ProgressView().controlSize(.mini)
+                                ProgressView().controlSize(.mini).tint(MP.onBrand)
                             } else {
                                 Image(systemName: "paperplane.fill")
                             }
                             Text("Teklif")
                         }
                     }
-                    .buttonStyle(MPCompactButtonStyle(tone: .brand))
+                    .buttonStyle(MPCompactButtonStyle(tone: .brand, filled: true))
                     .disabled(model.actionEntryID != nil)
                     .accessibilityLabel("\(entry.customerName) için masa teklifi gönder")
                 }
             }
         }
         .padding(.vertical, 4)
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                convertCandidate = entry
+            } label: {
+                Label("Walk-in", systemImage: "person.badge.plus")
+            }
+            .tint(MP.positive)
+        }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
                 candidate = WaitlistActionCandidate(entry: entry, kind: .cancel)
@@ -229,6 +233,9 @@ struct WaitlistView: View {
                 Button("Teklif gönder", systemImage: "paperplane") {
                     candidate = WaitlistActionCandidate(entry: entry, kind: .offer)
                 }
+            }
+            Button("Walk-in'e dönüştür", systemImage: "person.badge.plus") {
+                convertCandidate = entry
             }
             if let phoneURL = entry.phoneURL {
                 Link(destination: phoneURL) {

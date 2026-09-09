@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+private struct WaitlistOfferResult: Decodable {
+    let id: Int
+    let status: String
+}
+
 @MainActor
 final class TodayViewModel: ObservableObject {
     @Published private(set) var reservations: [Reservation] = []
@@ -8,6 +13,8 @@ final class TodayViewModel: ObservableObject {
     @Published private(set) var waitlist: [WaitlistEntry] = []
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var offeringEntryID: Int?
+    @Published private(set) var offerErrorMessage: String?
 
     private let api: APIClient
 
@@ -35,7 +42,49 @@ final class TodayViewModel: ObservableObject {
         } catch let error as APIError {
             errorMessage = error.message
         } catch {
+            guard !error.isCancellation else { return }
             errorMessage = "Bugünün verileri yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
+        }
+    }
+
+    /// Bekleme listesindeki misafire masa teklifi gönderir.
+    func sendOffer(for entry: WaitlistEntry, venue: Venue) async -> Bool {
+        offeringEntryID = entry.id
+        offerErrorMessage = nil
+        defer { offeringEntryID = nil }
+
+        do {
+            let _: WaitlistOfferResult = try await api.post("/waitlist/\(venue.id)/entry/\(entry.id)/offer")
+            await load(venue: venue)
+            return true
+        } catch let error as APIError {
+            offerErrorMessage = error.isConflict
+                ? "Bu kayıt veya masa uygunluğu başka bir ekranda değişti. Liste yenilendi."
+                : (error.detail ?? error.message)
+            await load(venue: venue)
+            return false
+        } catch {
+            offerErrorMessage = "Teklif gönderilemedi. Masa uygunluğunu kontrol edip yeniden deneyin."
+            return false
+        }
+    }
+
+    func markConverted(_ entry: WaitlistEntry, venue: Venue) async -> Bool {
+        offeringEntryID = entry.id
+        offerErrorMessage = nil
+        defer { offeringEntryID = nil }
+        struct StatusRequest: Encodable { let status: String }
+        do {
+            let _: WaitlistOfferResult = try await api.put("/waitlist/entry/\(entry.id)/status", body: StatusRequest(status: "CONVERTED"))
+            await load(venue: venue)
+            return true
+        } catch let error as APIError {
+            offerErrorMessage = "Walk-in oluşturuldu ancak bekleme kaydı kapatılamadı: \(error.detail ?? error.message)"
+            await load(venue: venue)
+            return false
+        } catch {
+            offerErrorMessage = "Walk-in oluşturuldu ancak bekleme kaydı kapatılamadı. Listeden elle kaldırın."
+            return false
         }
     }
 

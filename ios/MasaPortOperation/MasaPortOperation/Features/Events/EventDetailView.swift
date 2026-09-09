@@ -9,6 +9,8 @@ struct EventDetailView: View {
     @State private var searchText = ""
     @State private var filter: GuestFilter = .all
     @State private var checkInCandidate: EventReservation?
+    @State private var noteCandidate: EventReservation?
+    @StateObject private var searchHistory = SearchHistoryStore(scope: "event-guests")
     @State private var showsScanner = false
 
     var body: some View {
@@ -37,27 +39,25 @@ struct EventDetailView: View {
                         title: searchText.isEmpty ? "Bu seansta katılımcı yok" : "Eşleşen katılımcı bulunamadı",
                         message: searchText.isEmpty ? "Rezervasyon geldikçe burada listelenir." : "Ad, telefon veya misafir adıyla arayın."
                     )
-                    .mpPlainRow()
+                    .mpCard(padding: 0)
+                    .mpPlainRow(vertical: 4)
                 } else {
                     ForEach(filteredReservations) { reservation in
                         EventReservationRow(
                             reservation: reservation,
                             isCheckingIn: model.checkingInID == reservation.id,
-                            onCheckIn: { checkInCandidate = reservation }
+                            onCheckIn: { checkInCandidate = reservation },
+                            onEditNote: { noteCandidate = reservation }
                         )
                     }
                 }
             } header: {
-                HStack(spacing: 10) {
-                    Picker("Filtre", selection: $filter.animation(.snappy(duration: 0.2))) {
-                        ForEach(GuestFilter.allCases) { item in
-                            Text("\(item.title) · \(item.count(in: instanceReservations))").tag(item)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
+                MPSegmentBar(
+                    segments: GuestFilter.allCases.map { MPSegment(id: $0, title: $0.title, count: $0.count(in: instanceReservations)) },
+                    selection: $filter
+                )
                 .textCase(nil)
-                .padding(.bottom, 6)
+                .padding(.bottom, 8)
                 .listRowInsets(EdgeInsets())
             }
         }
@@ -65,6 +65,14 @@ struct EventDetailView: View {
         .scrollContentBackground(.hidden)
         .background(MP.background)
         .searchable(text: $searchText, prompt: "Katılımcı, telefon veya misafir")
+        .searchSuggestions {
+            HostDeskSearchSuggestions(
+                query: searchText,
+                history: searchHistory,
+                candidates: model.reservations.flatMap { [$0.contactName] + ($0.eventGuests ?? []).map(\.fullName) }
+            )
+        }
+        .onSubmit(of: .search) { searchHistory.record(searchText) }
         .navigationTitle("Katılımcılar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -97,22 +105,36 @@ struct EventDetailView: View {
             Text("\(checkInCandidate?.displayName ?? "Katılımcı") için \(checkInCandidate?.guestCount ?? 0) kişilik giriş kaydı oluşturulacak.")
         }
         .sensoryFeedback(.success, trigger: model.successCount)
+        .sheet(item: $noteCandidate) { reservation in
+            EventGuestNoteSheet(reservation: reservation) { note in
+                await model.updateNote(reservation, note: note, venueID: venueID, eventID: event.id)
+            }
+        }
     }
 
     // MARK: Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(event.title)
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(Color(.label))
-                if let description = event.description, !description.isEmpty {
-                    Text(description)
-                        .font(.subheadline)
-                        .foregroundStyle(Color(.secondaryLabel))
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                MPDateLeaf(
+                    day: EventDates.dayNumber(selectedInstance?.startDatetime ?? event.startDatetime),
+                    month: EventDates.monthShort(selectedInstance?.startDatetime ?? event.startDatetime),
+                    tone: event.activeInstance != nil && event.activeInstance?.id == selectedInstanceID ? .positive : .brand
+                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.title)
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .foregroundStyle(Color(.label))
                         .lineLimit(2)
+                    if let description = event.description, !description.isEmpty {
+                        Text(description)
+                            .font(.footnote)
+                            .foregroundStyle(Color(.secondaryLabel))
+                            .lineLimit(2)
+                    }
                 }
+                Spacer(minLength: 0)
             }
 
             if instances.count > 1 {
@@ -131,45 +153,51 @@ struct EventDetailView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "calendar")
+                            .foregroundStyle(MP.brand)
                         Text(selectedInstance.map { "\($0.dayText) · \($0.timeRangeText)" } ?? "Seans seç")
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.caption2.weight(.bold))
+                            .foregroundStyle(Color(.secondaryLabel))
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color(.label))
                     .padding(.horizontal, 12)
                     .frame(height: 34)
                     .background(MP.fill, in: Capsule())
+                    .overlay { Capsule().strokeBorder(MP.hairline, lineWidth: 1) }
                 }
             } else if let instance = selectedInstance {
                 Label("\(instance.dayText) · \(instance.timeRangeText)", systemImage: "calendar")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.label))
+                    .foregroundStyle(Color(.secondaryLabel))
             }
 
-            HStack(spacing: 0) {
-                headerFact(value: "\(checkedInGuests)", label: "içeride", tone: .positive)
-                headerFact(value: "\(paidGuests)", label: "bekleniyor", tone: .info)
-                headerFact(value: capacityValue, label: "kapasite", tone: nil)
-            }
+            HStack(spacing: 14) {
+                ZStack {
+                    MPProgressRing(progress: Double(checkedInGuests) / Double(max(1, totalGuests)), lineWidth: 6, tone: .positive)
+                    VStack(spacing: -1) {
+                        Text(checkedInGuests, format: .number)
+                            .font(.system(.headline, design: .rounded, weight: .bold))
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                        Text("/ \(totalGuests)")
+                            .font(.system(size: 9, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(Color(.secondaryLabel))
+                    }
+                }
+                .frame(width: 58, height: 58)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("İçeride \(checkedInGuests) / \(totalGuests) kişi")
 
-            ProgressView(value: Double(checkedInGuests), total: Double(max(1, totalGuests)))
-                .tint(MP.positive)
+                HStack(spacing: 0) {
+                    MPMetric(value: checkedInGuests, label: "İçeride", tone: .positive)
+                    MPMetric(value: paidGuests, label: "Bekleniyor", tone: paidGuests > 0 ? .info : .neutral)
+                    MPMetric(value: capacityValue, label: "Kapasite", tone: .neutral)
+                }
+            }
         }
         .mpCard()
-    }
-
-    private func headerFact(value: String, label: String, tone: MPTone?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(value)
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .monospacedDigit()
-                .foregroundStyle(tone?.color ?? Color(.label))
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(Color(.secondaryLabel))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Data
@@ -237,36 +265,35 @@ private struct EventReservationRow: View {
     let reservation: EventReservation
     let isCheckingIn: Bool
     let onCheckIn: () -> Void
+    let onEditNote: () -> Void
 
     @State private var isExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 12) {
-                Text(reservation.guestCount, format: .number)
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .monospacedDigit()
-                    .foregroundStyle(reservation.isCheckedIn ? MP.positive : Color(.label))
-                    .frame(width: 40, height: 40)
-                    .background((reservation.isCheckedIn ? MP.positive : MP.brand).opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .accessibilityLabel("\(reservation.guestCount) kişi")
+                MPAvatar(name: reservation.displayName, size: 42, tone: reservation.isCheckedIn ? .positive : .brand)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(reservation.displayName)
                         .font(.body.weight(.semibold))
                         .lineLimit(1)
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
+                        MPTag(text: "\(reservation.guestCount) kişi", tone: reservation.isCheckedIn ? .positive : .neutral, systemImage: "person.2.fill")
+                            .fixedSize()
                         if let phone = reservation.contactPhone, !phone.isEmpty {
                             Text(phone)
+                                .font(.caption)
+                                .foregroundStyle(Color(.secondaryLabel))
+                                .lineLimit(1)
                         }
-                        if let guests = reservation.eventGuests, guests.count > 1 {
-                            Text("·")
-                            Text("\(guests.count) misafir")
+                        if reservation.hasNote {
+                            Image(systemName: "text.quote")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(.tertiaryLabel))
+                                .accessibilityLabel("Not var")
                         }
                     }
-                    .font(.footnote)
-                    .foregroundStyle(Color(.secondaryLabel))
-                    .lineLimit(1)
                 }
 
                 Spacer(minLength: 6)
@@ -276,11 +303,11 @@ private struct EventReservationRow: View {
                     if !reservation.isCheckedIn && reservation.isPaid {
                         Button(action: onCheckIn) {
                             HStack(spacing: 5) {
-                                if isCheckingIn { ProgressView().controlSize(.mini) } else { Image(systemName: "checkmark") }
+                                if isCheckingIn { ProgressView().controlSize(.mini).tint(.white) } else { Image(systemName: "checkmark") }
                                 Text("Geldi")
                             }
                         }
-                        .buttonStyle(MPCompactButtonStyle(tone: .positive))
+                        .buttonStyle(MPCompactButtonStyle(tone: .positive, filled: true))
                         .disabled(isCheckingIn)
                     }
                 }
@@ -311,7 +338,7 @@ private struct EventReservationRow: View {
                             .foregroundStyle(Color(.secondaryLabel))
                     }
                 }
-                .padding(.leading, 52)
+                .padding(.leading, 54)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
@@ -328,6 +355,11 @@ private struct EventReservationRow: View {
             if !reservation.isCheckedIn && reservation.isPaid {
                 Button("Check-in yap", systemImage: "person.fill.checkmark", action: onCheckIn)
             }
+            Button(reservation.hasNote ? "Notu düzenle" : "Not ekle", systemImage: "text.quote", action: onEditNote)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: onEditNote) { Label("Not", systemImage: "text.quote") }
+                .tint(MP.attention)
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             if !reservation.isCheckedIn && reservation.isPaid {
@@ -349,5 +381,99 @@ private struct EventReservationRow: View {
         case "FAILED": return MPStatus(text: "Ödeme başarısız", tone: .critical)
         default: return MPStatus(text: reservation.paymentStatus ?? "—", tone: .neutral)
         }
+    }
+}
+
+extension EventReservation {
+    var hasNote: Bool { !(note ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+}
+
+/// Etkinlik katılımcısı notu düzenleme.
+private struct EventGuestNoteSheet: View {
+    let reservation: EventReservation
+    let onSave: (String) async -> Bool
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var note: String
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+    @FocusState private var isFocused: Bool
+
+    init(reservation: EventReservation, onSave: @escaping (String) async -> Bool) {
+        self.reservation = reservation
+        self.onSave = onSave
+        _note = State(initialValue: reservation.note ?? "")
+    }
+
+    private var hasChanges: Bool {
+        note.trimmingCharacters(in: .whitespacesAndNewlines) != (reservation.note ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 12) {
+                    MPAvatar(name: reservation.displayName, size: 40)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(reservation.displayName)
+                            .font(.subheadline.weight(.semibold))
+                        Text("\(reservation.guestCount) kişi")
+                            .font(.caption)
+                            .foregroundStyle(Color(.secondaryLabel))
+                    }
+                    Spacer(minLength: 0)
+                }
+                .mpCard(padding: 12)
+
+                TextField("Alerji, masa tercihi, kutlama…", text: $note, axis: .vertical)
+                    .lineLimit(4...8)
+                    .focused($isFocused)
+                    .mpCard(padding: 14)
+
+                Text("Not yalnızca operasyon ekibine görünür; misafire gönderilmez.")
+                    .font(.caption)
+                    .foregroundStyle(Color(.tertiaryLabel))
+
+                if let errorMessage {
+                    MPNotice(message: errorMessage)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, MP.gutter)
+            .padding(.top, 8)
+            .background(MP.background)
+            .navigationTitle(reservation.hasNote ? "Notu düzenle" : "Not ekle")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Vazgeç") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    isFocused = false
+                    Task {
+                        isSubmitting = true
+                        errorMessage = nil
+                        let ok = await onSave(note.trimmingCharacters(in: .whitespacesAndNewlines))
+                        isSubmitting = false
+                        if ok { dismiss() } else { errorMessage = "Not kaydedilemedi. Katılımcı listesindeki uyarıyı kontrol edin." }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if isSubmitting { ProgressView().tint(MP.onBrand) }
+                        Text(isSubmitting ? "Kaydediliyor…" : (note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && reservation.hasNote ? "Notu sil" : "Notu kaydet"))
+                    }
+                }
+                .buttonStyle(MPPrimaryButtonStyle())
+                .disabled(!hasChanges || isSubmitting)
+                .opacity(hasChanges ? 1 : 0.5)
+                .padding(.horizontal, MP.gutter)
+                .padding(.vertical, 10)
+                .background(.bar)
+            }
+            .onAppear { isFocused = true }
+        }
+        .presentationDetents([.medium, .large])
     }
 }

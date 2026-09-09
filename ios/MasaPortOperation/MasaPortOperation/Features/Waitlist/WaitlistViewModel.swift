@@ -35,6 +35,7 @@ final class WaitlistViewModel: ObservableObject {
         } catch let error as APIError {
             errorMessage = error.message
         } catch {
+            guard !error.isCancellation else { return }
             errorMessage = "Bekleme listesi yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -58,6 +59,29 @@ final class WaitlistViewModel: ObservableObject {
             return false
         } catch {
             errorMessage = "Teklif gönderilemedi. Masa uygunluğunu kontrol edip yeniden deneyin."
+            return false
+        }
+    }
+
+    /// Walk-in kaydı oluşturulduktan sonra bekleme kaydını dönüştürüldü olarak kapatır.
+    func markConverted(_ entry: WaitlistEntry, venueID: Int) async -> Bool {
+        actionEntryID = entry.id
+        errorMessage = nil
+        defer { actionEntryID = nil }
+
+        do {
+            let _: WaitlistActionResponse = try await api.put(
+                "/waitlist/entry/\(entry.id)/status",
+                body: WaitlistStatusRequest(status: "CONVERTED")
+            )
+            await load(venueID: venueID)
+            return true
+        } catch let error as APIError {
+            errorMessage = "Walk-in oluşturuldu ancak bekleme kaydı kapatılamadı: \(error.detail ?? error.message)"
+            await load(venueID: venueID)
+            return false
+        } catch {
+            errorMessage = "Walk-in oluşturuldu ancak bekleme kaydı kapatılamadı. Listeden elle kaldırın."
             return false
         }
     }

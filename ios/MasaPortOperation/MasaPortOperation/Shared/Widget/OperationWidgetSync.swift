@@ -66,6 +66,13 @@ enum OperationWidgetSync {
                     startTime: String($0.startTime.prefix(5)),
                     guestCount: $0.guestCount
                 )
+            },
+            tableCount: tables.count,
+            arrivedCount: reservations.count { $0.checkedIn },
+            expectedCount: reservations.count { $0.checkedIn || $0.status.uppercased() == "CONFIRMED" },
+            insideCount: reservations.count { reservation in
+                if case .inside = reservation.operationalState(relativeTo: referenceDate) { return true }
+                return false
             }
         )
     }

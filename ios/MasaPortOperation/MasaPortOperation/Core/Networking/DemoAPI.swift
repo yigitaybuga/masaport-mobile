@@ -123,7 +123,9 @@ final class DemoStore {
             Self.reservation(id: 108, start: now.addingTimeInterval(55 * 60), guests: 2, name: "Burak Şahin", phone: "+90 541 888 99 00", tables: [table(9)]),
             Self.reservation(id: 109, start: now.addingTimeInterval(150 * 60), guests: 4, name: "Deniz Aydın", phone: "+90 542 999 00 11", tables: [table(4)]),
             Self.reservation(id: 110, start: now.addingTimeInterval(-180 * 60), guests: 2, name: "Kerem Çelik", phone: "+90 543 000 11 22", tables: [table(1)], status: "COMPLETED", service: "LEFT", checkedIn: true),
-            Self.reservation(id: 111, start: now.addingTimeInterval(-60 * 60), guests: 3, name: "Gizem Polat", phone: "+90 544 111 22 33", tables: [], status: "CANCELLED")
+            Self.reservation(id: 111, start: now.addingTimeInterval(-60 * 60), guests: 3, name: "Gizem Polat", phone: "+90 544 111 22 33", tables: [], status: "CANCELLED"),
+            Self.reservation(id: 112, start: now.addingTimeInterval(24 * 3600 + 30 * 60), guests: 4, name: "Bora Kaplan", phone: "+90 548 555 66 77", tables: [table(3)]),
+            Self.reservation(id: 113, start: now.addingTimeInterval(24 * 3600 + 90 * 60), guests: 2, name: "Nehir Acar", phone: "+90 549 666 77 88", tables: [], status: "PENDING")
         ]
 
         let iso = ISO8601DateFormatter()
@@ -207,6 +209,7 @@ final class DemoStore {
             eventReservation(608, instance: brunch, name: "Umut Sezer", phone: "+90 558 800 90 00", guests: ["Umut Sezer", "Melis Sezer"], payment: "PAID", checkedIn: true)
         ]
         eventReservationsSnapshot = eventReservations
+        syncTableStates()
     }
 
     // MARK: Routing
@@ -228,7 +231,30 @@ final class DemoStore {
             return ok(EmptyResponse())
         }
         if method == "GET", count == 2, part(0) == "reservations" {
-            return ok(reservations)
+            let date = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first { $0.name == "date" }?.value
+            return ok(date.map { day in reservations.filter { $0.reservationDate == day } } ?? reservations)
+        }
+        if method == "GET", count == 3, part(0) == "reservations", part(2) == "available-tables" {
+            let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            let guests = query.first { $0.name == "guest_count" }?.value.flatMap(Int.init) ?? 2
+            return venueAvailableTables(guestCount: guests)
+        }
+        if method == "POST", count == 3, part(0) == "reservations", part(2) == "walk-in" {
+            return createWalkIn(body: body)
+        }
+        if method == "GET", count == 3, part(0) == "reservations", let id = Int(part(2)) {
+            guard let reservation = reservations.first(where: { $0.id == id }) else { return fail(404, "Rezervasyon bulunamadı") }
+            return ok(reservation)
+        }
+        if method == "PUT", count == 3, part(0) == "reservations", let id = Int(part(2)) {
+            return updateReservation(reservationID: id, body: body)
+        }
+        if method == "PUT", count == 4, part(0) == "reservations", part(3) == "status" {
+            return updateStatus(reservationID: Int(part(2)) ?? 0, body: body)
+        }
+        if method == "POST", count == 4, part(0) == "reservations", part(3) == "no-show" {
+            return markNoShow(reservationID: Int(part(2)) ?? 0, body: body)
         }
         if method == "GET", count == 2, part(0) == "tables" {
             return ok(tables)
@@ -247,6 +273,16 @@ final class DemoStore {
         }
         if method == "GET", count == 3, part(0) == "events", part(2) == "events" {
             return ok(events.map { $0.summary(now: Date()) })
+        }
+        if method == "PUT", count == 6, part(0) == "events", part(2) == "reservations", part(5) == "note" {
+            struct Request: Decodable { let note: String? }
+            let reservationID = Int(part(4)) ?? 0
+            guard let index = eventReservations.firstIndex(where: { $0.id == reservationID }) else {
+                return fail(404, "Event reservation not found")
+            }
+            let note = ((try? decoder.decode(Request.self, from: body))?.note ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            eventReservations[index] = eventReservations[index].demoUpdating(note: note.isEmpty ? nil : note)
+            return ok(EventReservationNoteResult(id: reservationID, note: note.isEmpty ? nil : note))
         }
         if method == "GET", count == 4, part(0) == "events", part(2) == "reservations" {
             let eventID = Int(part(3)) ?? 0
@@ -443,7 +479,157 @@ final class DemoStore {
             updatedAt: Self.nowString()
         )
         reservations[index] = reservations[index].updatingServiceStatus(update)
+        syncTableStates()
         return ok(update)
+    }
+
+    /// Masaların servis durumunu içerideki rezervasyonlardan türetir.
+    private func syncTableStates() {
+        tables = tables.map { table in
+            let active = reservations.first { reservation in
+                reservation.checkedIn
+                    && !["LEFT", "EMPTY"].contains((reservation.serviceStatus ?? "").uppercased())
+                    && reservation.tables.contains { $0.id == table.id }
+            }
+            return VenueTable(id: table.id, name: table.name, capacity: table.capacity, zone: table.zone, serviceStatus: active?.serviceStatus ?? "EMPTY")
+        }
+    }
+
+    private func occupiedTableIDs(excluding reservationID: Int? = nil) -> Set<Int> {
+        Set(
+            reservations
+                .filter { $0.id != reservationID && $0.checkedIn && !["LEFT", "EMPTY"].contains(($0.serviceStatus ?? "").uppercased()) }
+                .flatMap { $0.tables.map(\.id) }
+        )
+    }
+
+    private func venueAvailableTables(guestCount: Int) -> (Int, Data) {
+        let occupied = occupiedTableIDs()
+        let fitting = tables
+            .filter { !occupied.contains($0.id) && $0.capacity >= guestCount }
+            .sorted { $0.capacity < $1.capacity }
+        let recommendedID = fitting.first?.id
+        let options = tables.map { table in
+            AssignableTable(
+                id: table.id, name: table.name, capacity: table.capacity, zone: table.zone,
+                isAvailable: !occupied.contains(table.id),
+                isCurrent: false,
+                isRecommended: table.id == recommendedID
+            )
+        }
+        return ok(ReservationTableAvailability(tables: options))
+    }
+
+    private func createWalkIn(body: Data) -> (Int, Data) {
+        guard let request = try? decoder.decode(WalkInRequest.self, from: body) else {
+            return fail(400, "Geçersiz walk-in isteği.")
+        }
+        let occupied = occupiedTableIDs()
+        var chosen: [VenueTable] = []
+        if let ids = request.tableIDs, !ids.isEmpty {
+            chosen = tables.filter { ids.contains($0.id) }
+            if chosen.contains(where: { occupied.contains($0.id) }) {
+                return fail(409, "Seçilen masalardan biri şu an dolu.")
+            }
+        } else if let auto = tables
+            .filter({ !occupied.contains($0.id) && $0.capacity >= request.guestCount })
+            .min(by: { $0.capacity < $1.capacity }) {
+            chosen = [auto]
+        }
+        guard !chosen.isEmpty else {
+            return fail(409, "Bu saat için uygun masa bulunamadı. Farklı bir saat seçin veya mevcut masa planını kontrol edin.")
+        }
+        let start: Date = {
+            guard let time = request.startTime else { return Date() }
+            let today = OperationDate.today()
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(identifier: "Europe/Istanbul")
+            formatter.dateFormat = "yyyy-MM-dd HH:mm"
+            return formatter.date(from: "\(today) \(time)") ?? Date()
+        }()
+        let id = (reservations.map(\.id).max() ?? 100) + 1
+        let base = Self.reservation(
+            id: id, start: start, guests: request.guestCount, name: request.customerName, phone: request.customerPhone,
+            tables: chosen, status: "CONFIRMED", service: request.checkedIn ? "ARRIVED" : nil,
+            checkedIn: request.checkedIn, note: request.note
+        )
+        let duration = TimeInterval((request.durationMinutes ?? 90) * 60)
+        let created = Reservation(
+            id: base.id, uuid: base.uuid, reservationDate: base.reservationDate, startTime: base.startTime,
+            endTime: Self.timeString(start.addingTimeInterval(duration)), guestCount: base.guestCount, status: base.status,
+            serviceStatus: base.serviceStatus, customerName: base.customerName, customerPhone: base.customerPhone,
+            note: base.note, tables: base.tables, checkedIn: base.checkedIn, updatedAt: base.updatedAt
+        )
+        reservations.append(created)
+        syncTableStates()
+        return (201, (try? encoder.encode(Envelope(success: true, data: WalkInResult(
+            reservationID: created.id, reservationUUID: created.uuid,
+            tables: chosen.map { ReservationTableUpdate(id: $0.id, name: $0.name, capacity: $0.capacity) },
+            startTime: String(created.startTime.prefix(5)), endTime: String(created.endTime.prefix(5)),
+            checkedIn: request.checkedIn
+        ), error: nil, message: "Walk-in reservation created successfully"))) ?? Data())
+    }
+
+    private func updateReservation(reservationID: Int, body: Data) -> (Int, Data) {
+        guard let index = reservations.firstIndex(where: { $0.id == reservationID }),
+              let request = try? decoder.decode(ReservationUpdateRequest.self, from: body) else {
+            return fail(400, "Geçersiz güncelleme isteği.")
+        }
+        let current = reservations[index]
+        if request.expectedUpdatedAt != current.updatedAt {
+            return fail(409, "RESOURCE_CONFLICT", message: "Rezervasyon başka bir cihazda değişti.")
+        }
+        var newStart: String? = nil
+        var newEnd: String? = nil
+        if let start = request.startTime {
+            let duration = OperationDate.minutesBetween(current.startTime, current.endTime) ?? 90
+            newStart = "\(start):00"
+            newEnd = OperationDate.timeString(adding: duration, to: start) + ":00"
+            let occupied = occupiedTableIDs(excluding: current.id)
+            let conflicts = current.tables.filter { occupied.contains($0.id) }.map(\.name)
+            if !conflicts.isEmpty {
+                return fail(409, "TABLE_CONFLICT", message: "Yeni saatte şu masalar dolu: \(conflicts.joined(separator: ", ")). Önce masa atamasını değiştirin.")
+            }
+        }
+        reservations[index] = current.updating(
+            customerName: request.customerName ?? current.customerName,
+            customerPhone: request.customerPhone ?? current.customerPhone,
+            guestCount: request.guestCount ?? current.guestCount,
+            note: request.note ?? current.note,
+            startTime: newStart, endTime: newEnd,
+            updatedAt: Self.nowString()
+        )
+        return ok(EmptyResponse())
+    }
+
+    private func updateStatus(reservationID: Int, body: Data) -> (Int, Data) {
+        struct Request: Decodable { let status: String }
+        guard let index = reservations.firstIndex(where: { $0.id == reservationID }),
+              let request = try? decoder.decode(Request.self, from: body) else {
+            return fail(400, "Geçersiz durum isteği.")
+        }
+        reservations[index] = reservations[index].updating(status: request.status.uppercased(), updatedAt: Self.nowString())
+        syncTableStates()
+        return ok(EmptyResponse())
+    }
+
+    private func markNoShow(reservationID: Int, body: Data) -> (Int, Data) {
+        struct Request: Decodable { let reason: String }
+        guard let index = reservations.firstIndex(where: { $0.id == reservationID }),
+              let request = try? decoder.decode(Request.self, from: body) else {
+            return fail(400, "Geçersiz istek.")
+        }
+        if request.reason.trimmingCharacters(in: .whitespacesAndNewlines).count < 3 {
+            return fail(400, "No-show reason must be between 3 and 500 characters")
+        }
+        let reservation = reservations[index]
+        if reservation.checkedIn || reservation.isTerminal {
+            return fail(409, "Only an unseated pending or confirmed reservation can be marked as no-show")
+        }
+        reservations[index] = reservation.updating(status: "NO_SHOW", updatedAt: Self.nowString())
+        return ok(EmptyResponse())
     }
 
     private func offer(entryID: Int) -> (Int, Data) {

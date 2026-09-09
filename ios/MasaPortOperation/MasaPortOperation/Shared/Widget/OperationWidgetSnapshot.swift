@@ -9,6 +9,11 @@ struct OperationWidgetSnapshot: Codable, Equatable {
     let overdueCount: Int
     let pendingCount: Int
     let nextReservation: OperationWidgetReservation?
+    /// Sonradan eklenen alanlar; eski anlık görüntülerle uyum için isteğe bağlı.
+    var tableCount: Int? = nil
+    var arrivedCount: Int? = nil
+    var expectedCount: Int? = nil
+    var insideCount: Int? = nil
 
     static let placeholder = OperationWidgetSnapshot(
         venueName: "MasaPort",
@@ -18,7 +23,11 @@ struct OperationWidgetSnapshot: Codable, Equatable {
         waitlistCount: 3,
         overdueCount: 1,
         pendingCount: 2,
-        nextReservation: OperationWidgetReservation(startTime: "19:30", guestCount: 4)
+        nextReservation: OperationWidgetReservation(startTime: "19:30", guestCount: 4),
+        tableCount: 12,
+        arrivedCount: 9,
+        expectedCount: 16,
+        insideCount: 7
     )
 
     static let empty = OperationWidgetSnapshot(

@@ -16,54 +16,61 @@ struct ReservationRow: View {
             default: false
             }
         }()
+        let timeTone: MPTone = {
+            switch state {
+            case .overdue: .critical
+            case .now: .info
+            case .inside: .positive
+            default: .neutral
+            }
+        }()
 
         HStack(alignment: .center, spacing: 12) {
-            MPTimeColumn(
-                time: reservation.shortTime,
-                caption: reservation.guestText,
-                tone: {
-                    if case .overdue = state { return .critical }
-                    if case .now = state { return .info }
-                    return nil
-                }()
-            )
+            MPTimeBlock(time: reservation.shortTime, caption: reservation.guestText, tone: timeTone)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(reservation.displayName)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Color(.label))
                     .lineLimit(1)
-                HStack(spacing: 5) {
-                    Image(systemName: reservation.hasTable ? "tablecells" : "tablecells.badge.ellipsis")
-                        .font(.caption2)
-                    Text(reservation.tableSummary)
-                        .lineLimit(1)
-                    if let note = reservation.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                HStack(spacing: 6) {
+                    if reservation.hasTable {
+                        ForEach(reservation.tables.prefix(3)) { table in
+                            MPTag(text: table.name, systemImage: "tablecells")
+                        }
+                        if reservation.tables.count > 3 {
+                            Text("+\(reservation.tables.count - 3)")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Color(.secondaryLabel))
+                        }
+                    } else {
+                        MPTag(text: "Masa yok", tone: .attention, systemImage: "tablecells.badge.ellipsis")
+                    }
+                    if reservation.hasNote {
                         Image(systemName: "text.quote")
-                            .font(.caption2)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color(.tertiaryLabel))
                             .accessibilityLabel("Not var")
                     }
                 }
-                .font(.footnote)
-                .foregroundStyle(reservation.hasTable ? Color(.secondaryLabel) : MP.attention)
             }
 
             Spacer(minLength: 6)
 
-            VStack(alignment: .trailing, spacing: 7) {
+            VStack(alignment: .trailing, spacing: 8) {
                 MPStatusLabel(status: status, emphasized: isUrgent)
                 if let onCheckIn, reservation.canCheckIn {
                     Button(action: onCheckIn) {
                         HStack(spacing: 5) {
                             if isCheckingIn {
-                                ProgressView().controlSize(.mini)
+                                ProgressView().controlSize(.mini).tint(.white)
                             } else {
                                 Image(systemName: "checkmark")
                             }
                             Text("Geldi")
                         }
                     }
-                    .buttonStyle(MPCompactButtonStyle(tone: .positive))
+                    .buttonStyle(MPCompactButtonStyle(tone: .positive, filled: true))
                     .disabled(isCheckingIn)
                     .accessibilityLabel("\(reservation.displayName) için check-in yap")
                 }

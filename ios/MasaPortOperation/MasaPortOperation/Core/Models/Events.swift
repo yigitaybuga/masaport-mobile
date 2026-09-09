@@ -169,3 +169,23 @@ extension EventSummary {
 
     var soldTickets: Int { displayedInstance?.soldTickets ?? 0 }
 }
+
+struct EventReservationNoteRequest: Codable {
+    let note: String
+}
+
+struct EventReservationNoteResult: Codable {
+    let id: Int
+    let note: String?
+}
+
+extension EventReservation {
+    func demoUpdating(note: String?) -> EventReservation {
+        EventReservation(
+            id: id, uuid: uuid, eventInstanceId: eventInstanceId, contactName: contactName,
+            contactEmail: contactEmail, contactPhone: contactPhone, note: note, guestCount: guestCount,
+            paymentStatus: paymentStatus, totalAmount: totalAmount, checkedIn: checkedIn, checkedInAt: checkedInAt,
+            createdAt: createdAt, eventGuests: eventGuests, eventInstance: eventInstance
+        )
+    }
+}

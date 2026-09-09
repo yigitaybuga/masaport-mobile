@@ -12,13 +12,10 @@ struct LoginView: View {
     private enum Field { case email, password }
 
     var body: some View {
-        ZStack {
-            MP.background.ignoresSafeArea()
-
+        GeometryReader { proxy in
             ScrollView {
-                VStack(spacing: 28) {
-                    header
-                        .padding(.top, 72)
+                VStack(spacing: 0) {
+                    hero(topInset: proxy.safeAreaInsets.top)
 
                     VStack(spacing: 14) {
                         formCard
@@ -41,44 +38,63 @@ struct LoginView: View {
                         .disabled(!canSubmit)
                         .opacity(canSubmit ? 1 : 0.5)
                         .animation(.easeOut(duration: 0.2), value: canSubmit)
+
+                        footer
+                            .padding(.top, 10)
                     }
                     .animation(.snappy(duration: 0.25), value: errorMessage)
-
-                    footer
+                    .padding(.horizontal, MP.gutter)
+                    .padding(.top, -28)
+                    .padding(.bottom, 40)
+                    .frame(maxWidth: 440)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, MP.gutter)
-                .padding(.bottom, 40)
-                .frame(maxWidth: 440)
-                .frame(maxWidth: .infinity)
             }
+            .ignoresSafeArea(edges: .top)
             .scrollDismissesKeyboard(.interactively)
         }
+        .background(MP.background)
         .onSubmit {
             if focusedField == .email { focusedField = .password }
             else if canSubmit { Task { await signIn() } }
         }
     }
 
-    private var header: some View {
-        VStack(spacing: 14) {
-            MPBrandMark(size: 56)
-                .padding(18)
-                .background(MP.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            VStack(spacing: 4) {
+    private func hero(topInset: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 22) {
+            MPBrandTile(size: 60)
+            VStack(alignment: .leading, spacing: 6) {
                 Text("MasaPort Operasyon")
-                    .font(.system(.title2, design: .rounded, weight: .bold))
-                    .foregroundStyle(Color(.label))
-                Text("Servis ekibi için giriş")
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .foregroundStyle(MP.onHero)
+                Text("Host masası, bekleme listesi ve etkinlik check-in'i için servis ekibi girişi.")
                     .font(.subheadline)
-                    .foregroundStyle(Color(.secondaryLabel))
+                    .foregroundStyle(MP.onHeroSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .padding(.horizontal, MP.gutter)
+        .padding(.top, topInset + 44)
+        .padding(.bottom, 52)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            UnevenRoundedRectangle(bottomLeadingRadius: 30, bottomTrailingRadius: 30, style: .continuous)
+                .fill(MP.heroGradient)
+                .padding(.top, -600)
+        }
+        .overlay(alignment: .topTrailing) {
+            MPBrandMark(size: 220)
+                .opacity(0.07)
+                .rotationEffect(.degrees(14))
+                .offset(x: 60, y: topInset - 10)
+                .allowsHitTesting(false)
         }
     }
 
     private var formCard: some View {
         VStack(spacing: 0) {
             field(
-                systemImage: "envelope",
+                systemImage: "envelope.fill",
                 isFocused: focusedField == .email
             ) {
                 TextField("E-posta", text: $email)
@@ -90,10 +106,10 @@ struct LoginView: View {
                     .submitLabel(.next)
             }
 
-            Divider().padding(.leading, 46)
+            Divider().padding(.leading, 52)
 
             field(
-                systemImage: "lock",
+                systemImage: "lock.fill",
                 isFocused: focusedField == .password
             ) {
                 Group {
@@ -119,7 +135,7 @@ struct LoginView: View {
                 .accessibilityLabel(revealsPassword ? "Parolayı gizle" : "Parolayı göster")
             }
         }
-        .background(MP.card, in: RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
+        .mpCard(padding: 0)
     }
 
     private func field<Content: View>(
@@ -128,15 +144,12 @@ struct LoginView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.medium))
-                .foregroundStyle(isFocused ? MP.brand : Color(.secondaryLabel))
-                .frame(width: 22)
+            MPIconTile(systemImage: systemImage, tone: isFocused ? .brand : .neutral, size: 28)
             content()
                 .font(.body)
         }
         .padding(.horizontal, 14)
-        .frame(height: 52)
+        .frame(height: 56)
         .animation(.easeOut(duration: 0.15), value: isFocused)
     }
 
@@ -154,6 +167,7 @@ struct LoginView: View {
             #endif
         }
         .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
     }
 
     private var canSubmit: Bool {

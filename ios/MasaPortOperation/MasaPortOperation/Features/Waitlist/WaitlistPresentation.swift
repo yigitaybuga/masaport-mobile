@@ -117,3 +117,16 @@ extension WaitlistEntry {
         return fractionalISOFormatter.date(from: value) ?? ISOFormatter.date(from: value)
     }
 }
+
+extension WaitlistEntry {
+    /// Bekleme kaydını walk-in formuna taşır.
+    var walkInPrefill: WalkInPrefill {
+        WalkInPrefill(
+            customerName: customerName,
+            customerPhone: customerPhone,
+            guestCount: guestCount,
+            note: note,
+            sourceTitle: "Bekleme listesinden dönüştürülüyor: kayıt oluşturulunca bekleme kaydı otomatik kapatılır."
+        )
+    }
+}
