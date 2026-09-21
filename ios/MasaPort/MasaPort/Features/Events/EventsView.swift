@@ -37,7 +37,7 @@ struct EventsView: View {
                         MPEmptyState(systemImage: "ticket", title: "Etkinlik bulunamadı", message: "Tarih aralığını veya kategoriyi değiştirmeyi dene.")
                     } else {
                         ForEach(viewModel.events) { event in
-                            NavigationLink(value: AppRoute.event(id: event.id)) {
+                            NavigationLink(value: AppRoute.eventByID(id: event.id)) {
                                 EventCard(event: event)
                             }
                             .buttonStyle(.plain)

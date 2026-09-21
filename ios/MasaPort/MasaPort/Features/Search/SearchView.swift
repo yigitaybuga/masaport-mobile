@@ -233,7 +233,7 @@ struct SearchView: View {
                     MPEmptyState(systemImage: "ticket", title: "Etkinlik bulunamadı", message: "Farklı bir kelime veya şehir dene.")
                 }
                 ForEach(viewModel.events) { event in
-                    NavigationLink(value: AppRoute.event(id: event.id)) {
+                    NavigationLink(value: AppRoute.eventByID(id: event.id)) {
                         EventCard(event: event)
                     }
                     .buttonStyle(.plain)

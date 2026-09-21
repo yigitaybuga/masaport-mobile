@@ -3,8 +3,8 @@ import SwiftUI
 /// Sekmeler arasında paylaşılan gezinme hedefleri.
 enum AppRoute: Hashable {
     case listing(slug: String)
-    case event(id: Int)
-    case event(identifier: String)
+    case eventByID(id: Int)
+    case eventByIdentifier(identifier: String)
     case listings(ListingsPreset)
     case events(EventsPreset)
     case favorites
@@ -27,9 +27,9 @@ enum AppDeepLink: Hashable {
         case .listing(let slug): .listing(slug: slug)
         case .event(let identifier):
             if let id = Int(identifier) {
-                .event(id: id)
+                .eventByID(id: id)
             } else {
-                .event(identifier: identifier)
+                .eventByIdentifier(identifier: identifier)
             }
         }
     }
@@ -143,9 +143,9 @@ extension View {
             switch route {
             case .listing(let slug):
                 RestaurantDetailView(slug: slug)
-            case .event(id: let id):
+            case .eventByID(id: let id):
                 EventDetailView(eventID: id)
-            case .event(identifier: let identifier):
+            case .eventByIdentifier(identifier: let identifier):
                 EventDetailView(identifier: identifier)
             case .listings(let preset):
                 RestaurantsView(preset: preset)

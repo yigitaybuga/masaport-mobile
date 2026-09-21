@@ -136,7 +136,7 @@ struct ReservationTicketView: View {
                     }
                     .buttonStyle(.glass)
                 } else if let eventId = reservation.eventId {
-                    NavigationLink(value: AppRoute.event(id: eventId)) {
+                    NavigationLink(value: AppRoute.eventByID(id: eventId)) {
                         Label("Etkinliğe git", systemImage: "ticket").frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.glass)

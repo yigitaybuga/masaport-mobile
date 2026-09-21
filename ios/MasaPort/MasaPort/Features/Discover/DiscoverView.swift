@@ -144,7 +144,7 @@ struct DiscoverView: View {
         if !viewModel.showcaseEvents.isEmpty {
             section(title: "Yaklaşan etkinlikler", subtitle: "Önümüzdeki 14 gün") {
                 horizontalRow(viewModel.showcaseEvents) { event in
-                    NavigationLink(value: AppRoute.event(id: event.id)) {
+                    NavigationLink(value: AppRoute.eventByID(id: event.id)) {
                         EventTile(event: event)
                     }
                     .buttonStyle(.plain)

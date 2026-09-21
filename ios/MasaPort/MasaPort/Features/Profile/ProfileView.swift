@@ -112,7 +112,7 @@ struct FavoritesView: View {
                     if !model.favorites.events.isEmpty {
                         Section("Etkinlikler") {
                             ForEach(model.favorites.events) { item in
-                                NavigationLink(value: AppRoute.event(id: item.remoteId)) {
+                                NavigationLink(value: AppRoute.eventByID(id: item.remoteId)) {
                                     FavoriteRow(item: item)
                                 }
                             }
