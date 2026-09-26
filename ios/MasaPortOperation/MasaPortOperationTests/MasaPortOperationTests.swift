@@ -63,19 +63,123 @@ struct MasaPortOperationTests {
             [ReservationTableUpdate(id: 7, name: "A7", capacity: 4)],
             updatedAt: "2026-08-30T16:01:00.000Z"
         )
-        let arrived = withTable.updatingServiceStatus(
+        let seated = withTable.updatingServiceStatus(
             ReservationServiceStatusUpdate(
-                serviceStatus: "ARRIVED",
+                serviceStatus: "SEATED",
                 status: "CONFIRMED",
                 checkedIn: true,
                 updatedAt: "2026-08-30T16:02:00.000Z"
             )
         )
 
-        #expect(arrived.tables.map(\.name) == ["A7"])
-        #expect(arrived.checkedIn)
-        #expect(arrived.serviceStatus == "ARRIVED")
-        #expect(arrived.updatedAt == "2026-08-30T16:02:00.000Z")
+        let left = seated.updatingServiceStatus(
+            ReservationServiceStatusUpdate(
+                serviceStatus: "LEFT",
+                status: "COMPLETED",
+                checkedIn: true,
+                updatedAt: "2026-08-30T17:02:00.000Z"
+            )
+        )
+
+        #expect(seated.tables.map(\.name) == ["A7"])
+        #expect(seated.checkedIn)
+        #expect(seated.serviceStatus == "SEATED")
+        #expect(seated.updatedAt == "2026-08-30T16:02:00.000Z")
+        #expect(left.status == "COMPLETED")
+        #expect(left.serviceStatus == "LEFT")
+        #expect(left.operationalState() == .terminal)
+        #expect(!left.isInside)
+
+        let terminalButLegacySeated = seated.updatingServiceStatus(
+            ReservationServiceStatusUpdate(
+                serviceStatus: "SEATED",
+                status: "COMPLETED",
+                checkedIn: true,
+                updatedAt: "2026-08-30T17:02:00.000Z"
+            )
+        )
+        #expect(!terminalButLegacySeated.isInside)
+
+        let legacyCleaning = seated.updatingServiceStatus(
+            ReservationServiceStatusUpdate(
+                serviceStatus: "CLEANING",
+                status: "CONFIRMED",
+                checkedIn: true,
+                updatedAt: "2026-08-30T17:02:00.000Z"
+            )
+        )
+        #expect(legacyCleaning.operationalState() == .terminal)
+        #expect(!legacyCleaning.isInside)
+    }
+
+    @Test func legacyServiceStatusesCollapseIntoTheTwoServiceStages() {
+        #expect(ServiceAction.allCases == [.seated, .left])
+        #expect(ServiceAction.index(of: "ARRIVED") == 0)
+        #expect(ServiceAction.index(of: "BILL") == 0)
+        #expect(ServiceAction.index(of: "CLEANING") == 1)
+        #expect("ARRIVED".localizedServiceStatus == "Oturdu")
+        #expect("BILL".localizedServiceStatus == "Oturdu")
+        #expect("CLEANING".localizedServiceStatus == "Kalktı")
+        #expect(ServiceAction.current(for: "BILL") == .seated)
+        #expect(ServiceAction.current(for: "CLEANING") == .left)
+    }
+
+    @Test func demoCheckinSeatsAndLeavingReleasesTheTable() throws {
+        let store = DemoStore()
+        let sampleCode = store.sampleShortCode
+        let checkin = try store.respond(
+            method: "POST",
+            url: #require(URL(string: "https://demo.test/api/checkin/restaurant/\(sampleCode)")),
+            body: Data()
+        )
+        #expect(checkin.0 == 200)
+
+        let checkinReservationData = try store.respond(
+            method: "GET",
+            url: #require(URL(string: "https://demo.test/api/reservations/12/101")),
+            body: Data()
+        ).1
+        let seated = try #require(JSONDecoder().decode(APIEnvelope<Reservation>.self, from: checkinReservationData).data)
+        #expect(seated.serviceStatus == "SEATED")
+        #expect(seated.checkedIn)
+
+        struct ServiceRequest: Encodable {
+            let serviceStatus: String
+            enum CodingKeys: String, CodingKey { case serviceStatus = "service_status" }
+        }
+        let leaveBody = try JSONEncoder().encode(ServiceRequest(serviceStatus: "LEFT"))
+        let leave = try store.respond(
+            method: "PUT",
+            url: #require(URL(string: "https://demo.test/api/reservations/12/101/service-status")),
+            body: leaveBody
+        )
+        #expect(leave.0 == 200)
+
+        let completedData = try store.respond(
+            method: "GET",
+            url: #require(URL(string: "https://demo.test/api/reservations/12/101")),
+            body: Data()
+        ).1
+        let completed = try #require(JSONDecoder().decode(APIEnvelope<Reservation>.self, from: completedData).data)
+        #expect(completed.status == "COMPLETED")
+        #expect(completed.operationalState() == .terminal)
+        #expect(!completed.isInside)
+
+        let tablesData = try store.respond(
+            method: "GET",
+            url: #require(URL(string: "https://demo.test/api/tables/12")),
+            body: Data()
+        ).1
+        let tables = try #require(JSONDecoder().decode(APIEnvelope<[VenueTable]>.self, from: tablesData).data)
+        #expect(tables.first(where: { $0.id == 2 })?.serviceStatus == "EMPTY")
+
+        let availabilityData = try store.respond(
+            method: "GET",
+            url: #require(URL(string: "https://demo.test/api/reservations/12/available-tables?guest_count=2")),
+            body: Data()
+        ).1
+        let availability = try #require(JSONDecoder().decode(APIEnvelope<ReservationTableAvailability>.self, from: availabilityData).data)
+        #expect(availability.tables.first(where: { $0.id == 2 })?.isAvailable == true)
     }
 
     @Test func waitlistPresentationKeepsStatusCountsAndContactActionsConsistent() {

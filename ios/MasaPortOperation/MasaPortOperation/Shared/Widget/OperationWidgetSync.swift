@@ -51,7 +51,7 @@ enum OperationWidgetSync {
             reservationCount: reservations.count,
             activeTableCount: tables.count { table in
                 guard let status = table.serviceStatus?.uppercased() else { return false }
-                return status != "EMPTY"
+                return !["EMPTY", "LEFT", "CLEANING"].contains(status)
             },
             waitlistCount: waitlist.count,
             overdueCount: reservations.count { reservation in

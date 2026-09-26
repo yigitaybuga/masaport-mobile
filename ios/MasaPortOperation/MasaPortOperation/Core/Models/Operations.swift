@@ -181,11 +181,12 @@ extension Reservation {
     func operationalState(relativeTo referenceDate: Date = Date()) -> ReservationOperationalState {
         let normalizedStatus = status.uppercased()
         let normalizedService = serviceStatus?.uppercased()
-        if checkedIn && !["LEFT", "EMPTY"].contains(normalizedService ?? "") {
-            return .inside
-        }
-        if ["COMPLETED", "CANCELLED", "NO_SHOW"].contains(normalizedStatus) {
+        if ["COMPLETED", "CANCELLED", "NO_SHOW"].contains(normalizedStatus)
+            || ["LEFT", "CLEANING"].contains(normalizedService ?? "") {
             return .terminal
+        }
+        if checkedIn && !["EMPTY"].contains(normalizedService ?? "") {
+            return .inside
         }
         if normalizedStatus == "PENDING" {
             return .pending
@@ -436,66 +437,46 @@ enum OperationDate {
 // MARK: - Service flow
 
 enum ServiceAction: String, CaseIterable, Identifiable {
-    case arrived = "ARRIVED"
     case seated = "SEATED"
-    case bill = "BILL"
     case left = "LEFT"
-    case cleaning = "CLEANING"
-    case empty = "EMPTY"
 
     var id: String { rawValue }
 
     static func index(of serviceStatus: String?) -> Int {
-        guard let serviceStatus,
-              let action = ServiceAction(rawValue: serviceStatus.uppercased()),
-              let index = allCases.firstIndex(of: action) else {
-            return 0
-        }
-        return index
+        ["LEFT", "CLEANING"].contains(serviceStatus?.uppercased() ?? "") ? 1 : 0
     }
 
     var title: String {
         switch self {
-        case .arrived: "Geldi"
-        case .seated: "Masaya oturdu"
-        case .bill: "Hesap istendi"
-        case .left: "Ayrıldı"
-        case .cleaning: "Masa temizleniyor"
-        case .empty: "Masa boşaldı"
+        case .seated: "Oturdu"
+        case .left: "Kalktı"
         }
     }
 
     var symbol: String {
         switch self {
-        case .arrived: "figure.walk.arrival"
         case .seated: "chair.lounge"
-        case .bill: "creditcard"
         case .left: "figure.walk.departure"
-        case .cleaning: "sparkles"
-        case .empty: "circle.dashed"
         }
     }
 
     var tone: MPTone {
         switch self {
-        case .arrived, .seated: .positive
-        case .bill: .attention
-        case .left, .cleaning: .info
-        case .empty: .brand
+        case .seated: .positive
+        case .left: .info
         }
     }
 
-    /// Bu adımdan sonra gelen adım.
-    var next: ServiceAction? {
-        guard let index = Self.allCases.firstIndex(of: self), index + 1 < Self.allCases.count else { return nil }
-        return Self.allCases[index + 1]
-    }
+    var next: ServiceAction? { self == .seated ? .left : nil }
 
     static func current(for serviceStatus: String?) -> ServiceAction {
         allCases[index(of: serviceStatus)]
     }
 
     var confirmationMessage: String {
-        "Servis durumu ‘\(title)’ olarak güncellenecek."
+        switch self {
+        case .seated: "Misafir oturdu olarak işaretlenecek."
+        case .left: "Misafir kalktı olarak işaretlenecek, rezervasyon tamamlanacak ve masa boşalacak."
+        }
     }
 }

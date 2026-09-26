@@ -67,7 +67,7 @@ struct ReservationRow: View {
                             } else {
                                 Image(systemName: "checkmark")
                             }
-                            Text("Geldi")
+                            Text("Oturdu")
                         }
                     }
                     .buttonStyle(MPCompactButtonStyle(tone: .positive, filled: true))
@@ -98,11 +98,8 @@ extension String {
 
     var localizedServiceStatus: String {
         switch uppercased() {
-        case "ARRIVED": "Geldi"
-        case "SEATED": "Masada"
-        case "BILL": "Hesap"
-        case "LEFT": "Ayrıldı"
-        case "CLEANING": "Temizlikte"
+        case "ARRIVED", "SEATED", "BILL": "Oturdu"
+        case "LEFT", "CLEANING": "Kalktı"
         case "EMPTY": "Boş"
         default: self
         }

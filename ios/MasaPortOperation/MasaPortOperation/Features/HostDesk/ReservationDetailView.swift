@@ -549,10 +549,10 @@ struct ReservationDetailView: View {
             HStack(spacing: 12) {
                 MPIconTile(systemImage: "person.crop.circle.badge.clock", tone: .attention, size: 36)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Servis adımları check-in sonrası açılır")
+                    Text("Check-in ile misafir oturdu olarak işaretlenir")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color(.label))
-                    Text("Misafir geldiğinde Host Masası'ndan geliş kaydını tamamlayın.")
+                    Text("QR okutun veya Host Masası'ndan Oturdu işlemini kullanın.")
                         .font(.footnote)
                         .foregroundStyle(Color(.secondaryLabel))
                         .fixedSize(horizontal: false, vertical: true)
@@ -570,7 +570,7 @@ struct ReservationDetailView: View {
                 ForEach(Array(ServiceAction.allCases.enumerated()), id: \.element.id) { index, action in
                     serviceStep(action, index: index)
                 }
-                Text("Bir adıma dokunarak servis durumunu güncelleyin.")
+                Text("Misafir ayrıldığında Kalktı olarak işaretleyin; masa otomatik boşalır.")
                     .font(.caption)
                     .foregroundStyle(Color(.tertiaryLabel))
                     .padding(.top, 10)
@@ -643,7 +643,7 @@ struct ReservationDetailView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(model.isSaving || isCurrent)
+        .disabled(model.isSaving || !isNext || model.reservation.isTerminal)
         .accessibilityLabel("\(action.title)\(isCurrent ? ", mevcut durum" : "")")
     }
 

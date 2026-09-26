@@ -588,14 +588,12 @@ struct MPHourlyLoad: View {
 
 extension VenueTable {
     enum FloorState {
-        case empty, occupied, bill, cleaning
+        case empty, occupied
 
         var tone: MPTone {
             switch self {
             case .empty: .neutral
             case .occupied: .positive
-            case .bill: .attention
-            case .cleaning: .info
             }
         }
 
@@ -603,17 +601,13 @@ extension VenueTable {
             switch self {
             case .empty: "Boş"
             case .occupied: "Dolu"
-            case .bill: "Hesap"
-            case .cleaning: "Temizlik"
             }
         }
     }
 
     var floorState: FloorState {
         switch (serviceStatus ?? "").uppercased() {
-        case "ARRIVED", "SEATED": .occupied
-        case "BILL": .bill
-        case "CLEANING": .cleaning
+        case "ARRIVED", "SEATED", "BILL": .occupied
         default: .empty
         }
     }

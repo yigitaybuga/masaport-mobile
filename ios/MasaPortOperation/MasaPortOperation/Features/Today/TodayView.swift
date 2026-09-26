@@ -373,8 +373,6 @@ struct TodayView: View {
                 }
                 HStack(spacing: 14) {
                     legendDot(MP.positive, "Dolu")
-                    legendDot(MP.attention, "Hesap")
-                    legendDot(MP.info, "Temizlik")
                     legendDot(Color(.tertiaryLabel), "Boş")
                 }
                 .padding(.top, 2)

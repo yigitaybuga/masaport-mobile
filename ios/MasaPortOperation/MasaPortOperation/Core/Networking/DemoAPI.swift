@@ -92,7 +92,7 @@ final class DemoStore {
         ]
     )
 
-    private init() {
+    init() {
         let now = Date()
         let seedTables: [VenueTable] = [
             VenueTable(id: 1, name: "A1", capacity: 2, zone: "Salon", serviceStatus: "EMPTY"),
@@ -354,8 +354,9 @@ final class DemoStore {
             return fail(400, "EARLY_CHECKIN_WARNING", message: "Rezervasyon saatine daha \(minutes) dakika var. Erken check-in yapmak istediğinizden emin misiniz?")
         }
         reservations[index] = reservation.updatingServiceStatus(
-            ReservationServiceStatusUpdate(serviceStatus: "ARRIVED", status: "CONFIRMED", checkedIn: true, updatedAt: Self.nowString())
+            ReservationServiceStatusUpdate(serviceStatus: "SEATED", status: "CONFIRMED", checkedIn: true, updatedAt: Self.nowString())
         )
+        syncTableStates()
         let updated = reservations[index]
         return ok(CheckinPayload(success: true, data: CheckinResult(
             id: updated.id, uuid: updated.uuid, venue: venue.name, guestCount: updated.guestCount,
@@ -426,7 +427,7 @@ final class DemoStore {
         let currentIDs = Set(reservation.tables.map(\.id))
         let occupiedIDs = Set(
             reservations
-                .filter { $0.id != reservationID && $0.checkedIn && !["LEFT", "EMPTY"].contains($0.serviceStatus ?? "") }
+                .filter { $0.id != reservationID && $0.isInside }
                 .flatMap { $0.tables.map(\.id) }
         )
         let options = tables.map { table in
@@ -471,10 +472,30 @@ final class DemoStore {
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz servis durumu.")
         }
-        let service = request.serviceStatus.uppercased()
+        let rawService = request.serviceStatus.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let legacyStatusMap = [
+            "ARRIVED": "SEATED",
+            "BILL": "SEATED",
+            "CLEANING": "LEFT",
+            "EMPTY": "LEFT"
+        ]
+        let service = legacyStatusMap[rawService] ?? rawService
+        guard ["SEATED", "LEFT"].contains(service) else {
+            return fail(400, "Servis durumu Oturdu veya Kalktı olmalı.")
+        }
+        let current = reservations[index]
+        if ["CANCELLED", "NO_SHOW"].contains(current.status.uppercased()) {
+            return fail(409, "İptal veya gelmedi durumundaki rezervasyonda servis güncellenemez.")
+        }
+        if service == "SEATED" && current.isTerminal {
+            return fail(409, "Tamamlanmış rezervasyon yeniden oturdu olarak işaretlenemez.")
+        }
+        if service == "LEFT" && !current.checkedIn {
+            return fail(409, "Yalnızca check-in yapılmış rezervasyon kalktı olarak işaretlenebilir.")
+        }
         let update = ReservationServiceStatusUpdate(
             serviceStatus: service,
-            status: ["LEFT", "EMPTY"].contains(service) ? "COMPLETED" : "CONFIRMED",
+            status: ["LEFT", "CLEANING", "EMPTY"].contains(service) ? "COMPLETED" : "CONFIRMED",
             checkedIn: true,
             updatedAt: Self.nowString()
         )
@@ -487,9 +508,7 @@ final class DemoStore {
     private func syncTableStates() {
         tables = tables.map { table in
             let active = reservations.first { reservation in
-                reservation.checkedIn
-                    && !["LEFT", "EMPTY"].contains((reservation.serviceStatus ?? "").uppercased())
-                    && reservation.tables.contains { $0.id == table.id }
+                reservation.isInside && reservation.tables.contains { $0.id == table.id }
             }
             return VenueTable(id: table.id, name: table.name, capacity: table.capacity, zone: table.zone, serviceStatus: active?.serviceStatus ?? "EMPTY")
         }
@@ -498,7 +517,7 @@ final class DemoStore {
     private func occupiedTableIDs(excluding reservationID: Int? = nil) -> Set<Int> {
         Set(
             reservations
-                .filter { $0.id != reservationID && $0.checkedIn && !["LEFT", "EMPTY"].contains(($0.serviceStatus ?? "").uppercased()) }
+                .filter { $0.id != reservationID && $0.isInside }
                 .flatMap { $0.tables.map(\.id) }
         )
     }
@@ -552,7 +571,7 @@ final class DemoStore {
         let id = (reservations.map(\.id).max() ?? 100) + 1
         let base = Self.reservation(
             id: id, start: start, guests: request.guestCount, name: request.customerName, phone: request.customerPhone,
-            tables: chosen, status: "CONFIRMED", service: request.checkedIn ? "ARRIVED" : nil,
+            tables: chosen, status: "CONFIRMED", service: request.checkedIn ? "SEATED" : nil,
             checkedIn: request.checkedIn, note: request.note
         )
         let duration = TimeInterval((request.durationMinutes ?? 90) * 60)

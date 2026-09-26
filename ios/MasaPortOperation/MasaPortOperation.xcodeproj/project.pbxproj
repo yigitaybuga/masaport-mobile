@@ -1,58 +1,47 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 77;
+	classes = {
+	};
+	objectVersion = 71;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000000000000000000001 /* MasaPortOperationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* MasaPortOperationApp.swift */; };
-		A10000000000000000000002 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* AppRootView.swift */; };
-		A10000000000000000000003 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AppConfiguration.swift */; };
-		A10000000000000000000004 /* Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Authentication.swift */; };
-		A10000000000000000000005 /* Operations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* Operations.swift */; };
-		A10000000000000000000006 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* APIClient.swift */; };
-		A10000000000000000000007 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* KeychainStore.swift */; };
-		A10000000000000000000008 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* SessionStore.swift */; };
-		A10000000000000000000009 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* LoginView.swift */; };
-		A10000000000000000000010 /* TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* TodayViewModel.swift */; };
-		A10000000000000000000011 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* TodayView.swift */; };
-		A10000000000000000000053 /* WalkInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000056 /* WalkInView.swift */; };
-		A10000000000000000000054 /* TableDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000057 /* TableDetailSheet.swift */; };
-		A10000000000000000000055 /* SearchHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000058 /* SearchHistoryStore.swift */; };
-		A10000000000000000000056 /* HostDeskFloorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000059 /* HostDeskFloorView.swift */; };
-		A10000000000000000000012 /* ReservationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* ReservationRow.swift */; };
-		A10000000000000000000013 /* HostDeskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* HostDeskView.swift */; };
-		A10000000000000000000014 /* VenueMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* VenueMenu.swift */; };
-		A10000000000000000000015 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* ProfileView.swift */; };
+		A10000000000000000000001 /* App/MasaPortOperationApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* App/MasaPortOperationApp.swift */; };
+		A10000000000000000000002 /* App/AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* App/AppRootView.swift */; };
+		A10000000000000000000003 /* Core/Configuration/AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* Core/Configuration/AppConfiguration.swift */; };
+		A10000000000000000000004 /* Core/Models/Authentication.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Core/Models/Authentication.swift */; };
+		A10000000000000000000005 /* Core/Models/Operations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* Core/Models/Operations.swift */; };
+		A10000000000000000000006 /* Core/Networking/APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* Core/Networking/APIClient.swift */; };
+		A10000000000000000000007 /* Core/Security/KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000007 /* Core/Security/KeychainStore.swift */; };
+		A10000000000000000000008 /* Core/Session/SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* Core/Session/SessionStore.swift */; };
+		A10000000000000000000009 /* Features/Auth/LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* Features/Auth/LoginView.swift */; };
+		A10000000000000000000010 /* Features/Today/TodayViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* Features/Today/TodayViewModel.swift */; };
+		A10000000000000000000011 /* Features/Today/TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* Features/Today/TodayView.swift */; };
+		A10000000000000000000012 /* Features/Today/ReservationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* Features/Today/ReservationRow.swift */; };
+		A10000000000000000000013 /* Features/HostDesk/HostDeskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* Features/HostDesk/HostDeskView.swift */; };
+		A10000000000000000000014 /* Features/Venue/VenueMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* Features/Venue/VenueMenu.swift */; };
+		A10000000000000000000015 /* Features/Profile/ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000015 /* Features/Profile/ProfileView.swift */; };
 		A10000000000000000000016 /* MasaPortOperationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000016 /* MasaPortOperationTests.swift */; };
-		A10000000000000000000017 /* EmptyResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* EmptyResponse.swift */; };
-		A10000000000000000000018 /* HostDeskViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* HostDeskViewModel.swift */; };
-		A10000000000000000000019 /* ReservationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* ReservationDetailView.swift */; };
-		A10000000000000000000020 /* HostDeskLiveUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* HostDeskLiveUpdates.swift */; };
-		A10000000000000000000046 /* Checkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000049 /* Checkin.swift */; };
-		A10000000000000000000047 /* Events.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000050 /* Events.swift */; };
-		A10000000000000000000048 /* QRCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000051 /* QRCameraView.swift */; };
-		A10000000000000000000049 /* CheckinScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000052 /* CheckinScannerView.swift */; };
-		A10000000000000000000050 /* EventsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000053 /* EventsViewModel.swift */; };
-		A10000000000000000000051 /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000054 /* EventsView.swift */; };
-		A10000000000000000000052 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000055 /* EventDetailView.swift */; };
-		A10000000000000000000045 /* DemoAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000048 /* DemoAPI.swift */; };
-		A10000000000000000000021 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* DesignSystem.swift */; };
-		A10000000000000000000022 /* WaitlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* WaitlistView.swift */; };
-		A10000000000000000000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Assets.xcassets */; };
-		A10000000000000000000024 /* WaitlistViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029 /* WaitlistViewModel.swift */; };
-		A10000000000000000000025 /* WaitlistPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* WaitlistPresentation.swift */; };
-		A10000000000000000000026 /* OperationWidgetConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* OperationWidgetConfiguration.swift */; };
-		A10000000000000000000027 /* OperationWidgetReservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032 /* OperationWidgetReservation.swift */; };
-		A10000000000000000000028 /* OperationWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* OperationWidgetSnapshot.swift */; };
-		A10000000000000000000029 /* OperationWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* OperationWidgetSnapshotStore.swift */; };
-		A10000000000000000000030 /* OperationWidgetSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035 /* OperationWidgetSync.swift */; };
-		A10000000000000000000031 /* OperationTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* OperationTab.swift */; };
-		A10000000000000000000032 /* OperationWidgetConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* OperationWidgetConfiguration.swift */; };
-		A10000000000000000000033 /* OperationWidgetReservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032 /* OperationWidgetReservation.swift */; };
-		A10000000000000000000034 /* OperationWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* OperationWidgetSnapshot.swift */; };
-		A10000000000000000000035 /* OperationWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* OperationWidgetSnapshotStore.swift */; };
+		A10000000000000000000017 /* Core/Models/EmptyResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* Core/Models/EmptyResponse.swift */; };
+		A10000000000000000000018 /* Features/HostDesk/HostDeskViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* Features/HostDesk/HostDeskViewModel.swift */; };
+		A10000000000000000000019 /* Features/HostDesk/ReservationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* Features/HostDesk/ReservationDetailView.swift */; };
+		A10000000000000000000020 /* Features/HostDesk/HostDeskLiveUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* Features/HostDesk/HostDeskLiveUpdates.swift */; };
+		A10000000000000000000021 /* Shared/DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* Shared/DesignSystem.swift */; };
+		A10000000000000000000022 /* Features/Waitlist/WaitlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */; };
+		A10000000000000000000023 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Resources/Assets.xcassets */; };
+		A10000000000000000000024 /* Features/Waitlist/WaitlistViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */; };
+		A10000000000000000000025 /* Features/Waitlist/WaitlistPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */; };
+		A10000000000000000000026 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */; };
+		A10000000000000000000027 /* Shared/Widget/OperationWidgetReservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032 /* Shared/Widget/OperationWidgetReservation.swift */; };
+		A10000000000000000000028 /* Shared/Widget/OperationWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* Shared/Widget/OperationWidgetSnapshot.swift */; };
+		A10000000000000000000029 /* Shared/Widget/OperationWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* Shared/Widget/OperationWidgetSnapshotStore.swift */; };
+		A10000000000000000000030 /* Shared/Widget/OperationWidgetSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000035 /* Shared/Widget/OperationWidgetSync.swift */; };
+		A10000000000000000000031 /* App/OperationTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000036 /* App/OperationTab.swift */; };
+		A10000000000000000000032 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */; };
+		A10000000000000000000033 /* Shared/Widget/OperationWidgetReservation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000032 /* Shared/Widget/OperationWidgetReservation.swift */; };
+		A10000000000000000000034 /* Shared/Widget/OperationWidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000033 /* Shared/Widget/OperationWidgetSnapshot.swift */; };
+		A10000000000000000000035 /* Shared/Widget/OperationWidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000034 /* Shared/Widget/OperationWidgetSnapshotStore.swift */; };
 		A10000000000000000000036 /* MasaPortOperationWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000037 /* MasaPortOperationWidgetBundle.swift */; };
 		A10000000000000000000037 /* OperationWidgetEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000038 /* OperationWidgetEntry.swift */; };
 		A10000000000000000000038 /* OperationWidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000039 /* OperationWidgetProvider.swift */; };
@@ -60,9 +49,38 @@
 		A10000000000000000000040 /* OperationWidgetMetric.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000041 /* OperationWidgetMetric.swift */; };
 		A10000000000000000000041 /* OperationSummaryWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000042 /* OperationSummaryWidgetView.swift */; };
 		A10000000000000000000042 /* OperationSummaryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000043 /* OperationSummaryWidget.swift */; };
-		A10000000000000000000043 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Assets.xcassets */; };
+		A10000000000000000000043 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Resources/Assets.xcassets */; };
 		A10000000000000000000044 /* MasaPortOperationWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A20000000000000000000047 /* MasaPortOperationWidget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		A10000000000000000000045 /* Core/Networking/DemoAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000048 /* Core/Networking/DemoAPI.swift */; };
+		A10000000000000000000046 /* Core/Models/Checkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000049 /* Core/Models/Checkin.swift */; };
+		A10000000000000000000047 /* Core/Models/Events.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000050 /* Core/Models/Events.swift */; };
+		A10000000000000000000048 /* Features/Checkin/QRCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000051 /* Features/Checkin/QRCameraView.swift */; };
+		A10000000000000000000049 /* Features/Checkin/CheckinScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000052 /* Features/Checkin/CheckinScannerView.swift */; };
+		A10000000000000000000050 /* Features/Events/EventsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000053 /* Features/Events/EventsViewModel.swift */; };
+		A10000000000000000000051 /* Features/Events/EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000054 /* Features/Events/EventsView.swift */; };
+		A10000000000000000000052 /* Features/Events/EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000055 /* Features/Events/EventDetailView.swift */; };
+		A10000000000000000000053 /* Features/HostDesk/WalkInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */; };
+		A10000000000000000000054 /* Features/Today/TableDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */; };
+		A10000000000000000000055 /* Shared/SearchHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000058 /* Shared/SearchHistoryStore.swift */; };
+		A10000000000000000000056 /* Features/HostDesk/HostDeskFloorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A90000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A70000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000000000000000000001;
+			remoteInfo = MasaPortOperation;
+		};
+		A90000000000000000000003 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A70000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000000000000000000003;
+			remoteInfo = MasaPortOperationWidget;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		A30000000000000000000009 /* Embed App Extensions */ = {
@@ -70,61 +88,51 @@
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 13;
-			files = (A10000000000000000000044 /* MasaPortOperationWidget.appex in Embed App Extensions */, );
+			files = (
+				A10000000000000000000044 /* MasaPortOperationWidget.appex in Embed App Extensions */,
+			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A20000000000000000000001 /* MasaPortOperationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MasaPortOperationApp.swift; sourceTree = "<group>"; };
-		A20000000000000000000002 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/AppRootView.swift; sourceTree = "<group>"; };
-		A20000000000000000000003 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Configuration/AppConfiguration.swift; sourceTree = "<group>"; };
-		A20000000000000000000004 /* Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Authentication.swift; sourceTree = "<group>"; };
-		A20000000000000000000005 /* Operations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Operations.swift; sourceTree = "<group>"; };
-		A20000000000000000000049 /* Checkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Checkin.swift; sourceTree = "<group>"; };
-		A20000000000000000000050 /* Events.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Events.swift; sourceTree = "<group>"; };
-		A20000000000000000000051 /* QRCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Checkin/QRCameraView.swift; sourceTree = "<group>"; };
-		A20000000000000000000052 /* CheckinScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Checkin/CheckinScannerView.swift; sourceTree = "<group>"; };
-		A20000000000000000000053 /* EventsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventsViewModel.swift; sourceTree = "<group>"; };
-		A20000000000000000000054 /* EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventsView.swift; sourceTree = "<group>"; };
-		A20000000000000000000055 /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventDetailView.swift; sourceTree = "<group>"; };
-		A20000000000000000000048 /* DemoAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Networking/DemoAPI.swift; sourceTree = "<group>"; };
-		A20000000000000000000006 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Networking/APIClient.swift; sourceTree = "<group>"; };
-		A20000000000000000000007 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Security/KeychainStore.swift; sourceTree = "<group>"; };
-		A20000000000000000000008 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Session/SessionStore.swift; sourceTree = "<group>"; };
-		A20000000000000000000009 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/LoginView.swift; sourceTree = "<group>"; };
-		A20000000000000000000010 /* TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TodayViewModel.swift; sourceTree = "<group>"; };
-		A20000000000000000000011 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TodayView.swift; sourceTree = "<group>"; };
-		A20000000000000000000056 /* WalkInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/WalkInView.swift; sourceTree = "<group>"; };
-		A20000000000000000000057 /* TableDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TableDetailSheet.swift; sourceTree = "<group>"; };
-		A20000000000000000000058 /* SearchHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SearchHistoryStore.swift; sourceTree = "<group>"; };
-		A20000000000000000000059 /* HostDeskFloorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskFloorView.swift; sourceTree = "<group>"; };
-		A20000000000000000000012 /* ReservationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/ReservationRow.swift; sourceTree = "<group>"; };
-		A20000000000000000000013 /* HostDeskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskView.swift; sourceTree = "<group>"; };
-		A20000000000000000000014 /* VenueMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Venue/VenueMenu.swift; sourceTree = "<group>"; };
-		A20000000000000000000015 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/ProfileView.swift; sourceTree = "<group>"; };
+		A20000000000000000000001 /* App/MasaPortOperationApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MasaPortOperationApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* App/AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/AppRootView.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* Core/Configuration/AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Configuration/AppConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* Core/Models/Authentication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Authentication.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* Core/Models/Operations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Operations.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* Core/Networking/APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Networking/APIClient.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* Core/Security/KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Security/KeychainStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000008 /* Core/Session/SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Session/SessionStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* Features/Auth/LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Auth/LoginView.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* Features/Today/TodayViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TodayViewModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* Features/Today/TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TodayView.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* Features/Today/ReservationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/ReservationRow.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* Features/HostDesk/HostDeskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskView.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 /* Features/Venue/VenueMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Venue/VenueMenu.swift; sourceTree = "<group>"; };
+		A20000000000000000000015 /* Features/Profile/ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Profile/ProfileView.swift; sourceTree = "<group>"; };
 		A20000000000000000000016 /* MasaPortOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasaPortOperationTests.swift; sourceTree = "<group>"; };
-		A20000000000000000000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Resources/Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000017 /* Resources/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Resources/Info.plist; sourceTree = "<group>"; };
 		A20000000000000000000018 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		A20000000000000000000019 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		A20000000000000000000020 /* MasaPortOperation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MasaPortOperation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000000000000000000021 /* MasaPortOperationTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MasaPortOperationTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A20000000000000000000022 /* EmptyResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/EmptyResponse.swift; sourceTree = "<group>"; };
-		A20000000000000000000023 /* HostDeskViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskViewModel.swift; sourceTree = "<group>"; };
-		A20000000000000000000024 /* ReservationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/ReservationDetailView.swift; sourceTree = "<group>"; };
-		A20000000000000000000025 /* HostDeskLiveUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskLiveUpdates.swift; sourceTree = "<group>"; };
-		A20000000000000000000026 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem.swift; sourceTree = "<group>"; };
-		A20000000000000000000027 /* WaitlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistView.swift; sourceTree = "<group>"; };
-		A20000000000000000000028 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
-		A20000000000000000000029 /* WaitlistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistViewModel.swift; sourceTree = "<group>"; };
-		A20000000000000000000030 /* WaitlistPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistPresentation.swift; sourceTree = "<group>"; };
-		A20000000000000000000031 /* OperationWidgetConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetConfiguration.swift; sourceTree = "<group>"; };
-		A20000000000000000000032 /* OperationWidgetReservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetReservation.swift; sourceTree = "<group>"; };
-		A20000000000000000000033 /* OperationWidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSnapshot.swift; sourceTree = "<group>"; };
-		A20000000000000000000034 /* OperationWidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSnapshotStore.swift; sourceTree = "<group>"; };
-		A20000000000000000000035 /* OperationWidgetSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSync.swift; sourceTree = "<group>"; };
-		A20000000000000000000036 /* OperationTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/OperationTab.swift; sourceTree = "<group>"; };
+		A20000000000000000000022 /* Core/Models/EmptyResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/EmptyResponse.swift; sourceTree = "<group>"; };
+		A20000000000000000000023 /* Features/HostDesk/HostDeskViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskViewModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000024 /* Features/HostDesk/ReservationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/ReservationDetailView.swift; sourceTree = "<group>"; };
+		A20000000000000000000025 /* Features/HostDesk/HostDeskLiveUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskLiveUpdates.swift; sourceTree = "<group>"; };
+		A20000000000000000000026 /* Shared/DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem.swift; sourceTree = "<group>"; };
+		A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistView.swift; sourceTree = "<group>"; };
+		A20000000000000000000028 /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistViewModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistPresentation.swift; sourceTree = "<group>"; };
+		A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000032 /* Shared/Widget/OperationWidgetReservation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetReservation.swift; sourceTree = "<group>"; };
+		A20000000000000000000033 /* Shared/Widget/OperationWidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSnapshot.swift; sourceTree = "<group>"; };
+		A20000000000000000000034 /* Shared/Widget/OperationWidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSnapshotStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000035 /* Shared/Widget/OperationWidgetSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetSync.swift; sourceTree = "<group>"; };
+		A20000000000000000000036 /* App/OperationTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/OperationTab.swift; sourceTree = "<group>"; };
 		A20000000000000000000037 /* MasaPortOperationWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasaPortOperationWidgetBundle.swift; sourceTree = "<group>"; };
 		A20000000000000000000038 /* OperationWidgetEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationWidgetEntry.swift; sourceTree = "<group>"; };
 		A20000000000000000000039 /* OperationWidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationWidgetProvider.swift; sourceTree = "<group>"; };
@@ -134,14 +142,44 @@
 		A20000000000000000000043 /* OperationSummaryWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperationSummaryWidget.swift; sourceTree = "<group>"; };
 		A20000000000000000000044 /* MasaPortOperationWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MasaPortOperationWidget.entitlements; sourceTree = "<group>"; };
 		A20000000000000000000045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A20000000000000000000046 /* MasaPortOperation.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Resources/MasaPortOperation.entitlements; sourceTree = "<group>"; };
+		A20000000000000000000046 /* Resources/MasaPortOperation.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Resources/MasaPortOperation.entitlements; sourceTree = "<group>"; };
 		A20000000000000000000047 /* MasaPortOperationWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MasaPortOperationWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000048 /* Core/Networking/DemoAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Networking/DemoAPI.swift; sourceTree = "<group>"; };
+		A20000000000000000000049 /* Core/Models/Checkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Checkin.swift; sourceTree = "<group>"; };
+		A20000000000000000000050 /* Core/Models/Events.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/Events.swift; sourceTree = "<group>"; };
+		A20000000000000000000051 /* Features/Checkin/QRCameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Checkin/QRCameraView.swift; sourceTree = "<group>"; };
+		A20000000000000000000052 /* Features/Checkin/CheckinScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Checkin/CheckinScannerView.swift; sourceTree = "<group>"; };
+		A20000000000000000000053 /* Features/Events/EventsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventsViewModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000054 /* Features/Events/EventsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventsView.swift; sourceTree = "<group>"; };
+		A20000000000000000000055 /* Features/Events/EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Events/EventDetailView.swift; sourceTree = "<group>"; };
+		A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/WalkInView.swift; sourceTree = "<group>"; };
+		A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TableDetailSheet.swift; sourceTree = "<group>"; };
+		A20000000000000000000058 /* Shared/SearchHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SearchHistoryStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskFloorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A30000000000000000000004 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A30000000000000000000005 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		A30000000000000000000007 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -159,69 +197,93 @@
 		A40000000000000000000002 /* MasaPortOperation */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000001,
-				A20000000000000000000002,
-				A20000000000000000000036,
-				A20000000000000000000003,
-				A20000000000000000000004,
-				A20000000000000000000005,
-				A20000000000000000000022,
-				A20000000000000000000006,
-				A20000000000000000000048,
-				A20000000000000000000055,
-				A20000000000000000000054,
-				A20000000000000000000053,
-				A20000000000000000000052,
-				A20000000000000000000051,
-				A20000000000000000000050,
-				A20000000000000000000049,
-				A20000000000000000000007,
-				A20000000000000000000008,
-				A20000000000000000000009,
-				A20000000000000000000010,
-				A20000000000000000000011,
-				A20000000000000000000012,
-				A20000000000000000000059,
-				A20000000000000000000058,
-				A20000000000000000000057,
-				A20000000000000000000056,
-				A20000000000000000000013,
-				A20000000000000000000023,
-				A20000000000000000000024,
-				A20000000000000000000025,
-				A20000000000000000000026,
-				A20000000000000000000027,
-				A20000000000000000000029,
-				A20000000000000000000030,
-				A20000000000000000000031,
-				A20000000000000000000032,
-				A20000000000000000000033,
-				A20000000000000000000034,
-				A20000000000000000000035,
-				A20000000000000000000014,
-				A20000000000000000000015,
-				A20000000000000000000017,
-				A20000000000000000000028,
-				A20000000000000000000046,
+				A20000000000000000000001 /* App/MasaPortOperationApp.swift */,
+				A20000000000000000000002 /* App/AppRootView.swift */,
+				A20000000000000000000036 /* App/OperationTab.swift */,
+				A20000000000000000000003 /* Core/Configuration/AppConfiguration.swift */,
+				A20000000000000000000004 /* Core/Models/Authentication.swift */,
+				A20000000000000000000005 /* Core/Models/Operations.swift */,
+				A20000000000000000000022 /* Core/Models/EmptyResponse.swift */,
+				A20000000000000000000006 /* Core/Networking/APIClient.swift */,
+				A20000000000000000000048 /* Core/Networking/DemoAPI.swift */,
+				A20000000000000000000055 /* Features/Events/EventDetailView.swift */,
+				A20000000000000000000054 /* Features/Events/EventsView.swift */,
+				A20000000000000000000053 /* Features/Events/EventsViewModel.swift */,
+				A20000000000000000000052 /* Features/Checkin/CheckinScannerView.swift */,
+				A20000000000000000000051 /* Features/Checkin/QRCameraView.swift */,
+				A20000000000000000000050 /* Core/Models/Events.swift */,
+				A20000000000000000000049 /* Core/Models/Checkin.swift */,
+				A20000000000000000000007 /* Core/Security/KeychainStore.swift */,
+				A20000000000000000000008 /* Core/Session/SessionStore.swift */,
+				A20000000000000000000009 /* Features/Auth/LoginView.swift */,
+				A20000000000000000000010 /* Features/Today/TodayViewModel.swift */,
+				A20000000000000000000011 /* Features/Today/TodayView.swift */,
+				A20000000000000000000012 /* Features/Today/ReservationRow.swift */,
+				A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */,
+				A20000000000000000000058 /* Shared/SearchHistoryStore.swift */,
+				A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */,
+				A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */,
+				A20000000000000000000013 /* Features/HostDesk/HostDeskView.swift */,
+				A20000000000000000000023 /* Features/HostDesk/HostDeskViewModel.swift */,
+				A20000000000000000000024 /* Features/HostDesk/ReservationDetailView.swift */,
+				A20000000000000000000025 /* Features/HostDesk/HostDeskLiveUpdates.swift */,
+				A20000000000000000000026 /* Shared/DesignSystem.swift */,
+				A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */,
+				A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */,
+				A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */,
+				A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */,
+				A20000000000000000000032 /* Shared/Widget/OperationWidgetReservation.swift */,
+				A20000000000000000000033 /* Shared/Widget/OperationWidgetSnapshot.swift */,
+				A20000000000000000000034 /* Shared/Widget/OperationWidgetSnapshotStore.swift */,
+				A20000000000000000000035 /* Shared/Widget/OperationWidgetSync.swift */,
+				A20000000000000000000014 /* Features/Venue/VenueMenu.swift */,
+				A20000000000000000000015 /* Features/Profile/ProfileView.swift */,
+				A20000000000000000000017 /* Resources/Info.plist */,
+				A20000000000000000000028 /* Resources/Assets.xcassets */,
+				A20000000000000000000046 /* Resources/MasaPortOperation.entitlements */,
 			);
 			path = MasaPortOperation;
 			sourceTree = "<group>";
 		};
-		A40000000000000000000003 /* MasaPortOperationTests */ = { isa = PBXGroup; children = (A20000000000000000000016,); path = MasaPortOperationTests; sourceTree = "<group>"; };
-		A40000000000000000000004 /* Configuration */ = { isa = PBXGroup; children = (A20000000000000000000018, A20000000000000000000019,); path = Configuration; sourceTree = "<group>"; };
-		A40000000000000000000005 /* Products */ = { isa = PBXGroup; children = (A20000000000000000000020, A20000000000000000000047, A20000000000000000000021,); name = Products; sourceTree = "<group>"; };
+		A40000000000000000000003 /* MasaPortOperationTests */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000016 /* MasaPortOperationTests.swift */,
+			);
+			path = MasaPortOperationTests;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000004 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000018 /* Debug.xcconfig */,
+				A20000000000000000000019 /* Release.xcconfig */,
+			);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000020 /* MasaPortOperation.app */,
+				A20000000000000000000047 /* MasaPortOperationWidget.appex */,
+				A20000000000000000000021 /* MasaPortOperationTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		A40000000000000000000006 /* MasaPortOperationWidget */ = {
 			isa = PBXGroup;
 			children = (
-				A20000000000000000000037,
-				A20000000000000000000038,
-				A20000000000000000000039,
-				A20000000000000000000040,
-				A20000000000000000000041,
-				A20000000000000000000042,
-				A20000000000000000000043,
-				A20000000000000000000044,
-				A20000000000000000000045,
+				A20000000000000000000037 /* MasaPortOperationWidgetBundle.swift */,
+				A20000000000000000000038 /* OperationWidgetEntry.swift */,
+				A20000000000000000000039 /* OperationWidgetProvider.swift */,
+				A20000000000000000000040 /* OperationWidgetDesign.swift */,
+				A20000000000000000000041 /* OperationWidgetMetric.swift */,
+				A20000000000000000000042 /* OperationSummaryWidgetView.swift */,
+				A20000000000000000000043 /* OperationSummaryWidget.swift */,
+				A20000000000000000000044 /* MasaPortOperationWidget.entitlements */,
+				A20000000000000000000045 /* Info.plist */,
 			);
 			path = MasaPortOperationWidget;
 			sourceTree = "<group>";
@@ -232,9 +294,17 @@
 		A50000000000000000000001 /* MasaPortOperation */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A60000000000000000000001 /* Build configuration list for PBXNativeTarget "MasaPortOperation" */;
-			buildPhases = (A30000000000000000000001 /* Sources */, A30000000000000000000004 /* Frameworks */, A30000000000000000000002 /* Resources */, A30000000000000000000009 /* Embed App Extensions */);
-			buildRules = ();
-			dependencies = (A90000000000000000000004 /* PBXTargetDependency */,);
+			buildPhases = (
+				A30000000000000000000001 /* Sources */,
+				A30000000000000000000004 /* Frameworks */,
+				A30000000000000000000002 /* Resources */,
+				A30000000000000000000009 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A90000000000000000000004 /* PBXTargetDependency */,
+			);
 			name = MasaPortOperation;
 			productName = MasaPortOperation;
 			productReference = A20000000000000000000020 /* MasaPortOperation.app */;
@@ -243,9 +313,15 @@
 		A50000000000000000000002 /* MasaPortOperationTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A60000000000000000000002 /* Build configuration list for PBXNativeTarget "MasaPortOperationTests" */;
-			buildPhases = (A30000000000000000000003 /* Sources */, A30000000000000000000005 /* Frameworks */);
-			buildRules = ();
-			dependencies = (A90000000000000000000002 /* PBXTargetDependency */,);
+			buildPhases = (
+				A30000000000000000000003 /* Sources */,
+				A30000000000000000000005 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A90000000000000000000002 /* PBXTargetDependency */,
+			);
 			name = MasaPortOperationTests;
 			productName = MasaPortOperationTests;
 			productReference = A20000000000000000000021 /* MasaPortOperationTests.xctest */;
@@ -254,9 +330,15 @@
 		A50000000000000000000003 /* MasaPortOperationWidget */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = A60000000000000000000004 /* Build configuration list for PBXNativeTarget "MasaPortOperationWidget" */;
-			buildPhases = (A30000000000000000000006 /* Sources */, A30000000000000000000007 /* Frameworks */, A30000000000000000000008 /* Resources */);
-			buildRules = ();
-			dependencies = ();
+			buildPhases = (
+				A30000000000000000000006 /* Sources */,
+				A30000000000000000000007 /* Frameworks */,
+				A30000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
 			name = MasaPortOperationWidget;
 			productName = MasaPortOperationWidget;
 			productReference = A20000000000000000000047 /* MasaPortOperationWidget.appex */;
@@ -267,57 +349,359 @@
 /* Begin PBXProject section */
 		A70000000000000000000001 /* Project object */ = {
 			isa = PBXProject;
-			attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2600; LastUpgradeCheck = 2600; TargetAttributes = { A50000000000000000000001 = { CreatedOnToolsVersion = 26.0; }; A50000000000000000000002 = { CreatedOnToolsVersion = 26.0; }; A50000000000000000000003 = { CreatedOnToolsVersion = 26.0; }; }; };
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A50000000000000000000001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					A50000000000000000000002 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					A50000000000000000000003 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
 			buildConfigurationList = A60000000000000000000003 /* Build configuration list for PBXProject "MasaPortOperation" */;
 			compatibilityVersion = "Xcode 16.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (en, Base, tr,);
+			knownRegions = (
+				en,
+				Base,
+				tr,
+			);
 			mainGroup = A40000000000000000000001;
 			productRefGroup = A40000000000000000000005 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (A50000000000000000000001 /* MasaPortOperation */, A50000000000000000000003 /* MasaPortOperationWidget */, A50000000000000000000002 /* MasaPortOperationTests */,);
+			targets = (
+				A50000000000000000000001 /* MasaPortOperation */,
+				A50000000000000000000003 /* MasaPortOperationWidget */,
+				A50000000000000000000002 /* MasaPortOperationTests */,
+			);
 		};
 /* End PBXProject section */
 
-/* Begin PBXContainerItemProxy section */
-		A90000000000000000000001 /* PBXContainerItemProxy */ = { isa = PBXContainerItemProxy; containerPortal = A70000000000000000000001 /* Project object */; proxyType = 1; remoteGlobalIDString = A50000000000000000000001; remoteInfo = MasaPortOperation; };
-		A90000000000000000000003 /* PBXContainerItemProxy */ = { isa = PBXContainerItemProxy; containerPortal = A70000000000000000000001 /* Project object */; proxyType = 1; remoteGlobalIDString = A50000000000000000000003; remoteInfo = MasaPortOperationWidget; };
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		A90000000000000000000002 /* PBXTargetDependency */ = { isa = PBXTargetDependency; target = A50000000000000000000001 /* MasaPortOperation */; targetProxy = A90000000000000000000001 /* PBXContainerItemProxy */; };
-		A90000000000000000000004 /* PBXTargetDependency */ = { isa = PBXTargetDependency; target = A50000000000000000000003 /* MasaPortOperationWidget */; targetProxy = A90000000000000000000003 /* PBXContainerItemProxy */; };
-/* End PBXTargetDependency section */
-
 /* Begin PBXResourcesBuildPhase section */
-		A30000000000000000000002 /* Resources */ = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000023,); runOnlyForDeploymentPostprocessing = 0; };
-		A30000000000000000000008 /* Resources */ = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000043,); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000023 /* Resources/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000043 /* Resources/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A30000000000000000000001 /* Sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000031, A10000000000000000000003, A10000000000000000000004, A10000000000000000000005, A10000000000000000000017, A10000000000000000000006, A10000000000000000000045, A10000000000000000000052, A10000000000000000000051, A10000000000000000000050, A10000000000000000000049, A10000000000000000000048, A10000000000000000000047, A10000000000000000000046, A10000000000000000000007, A10000000000000000000008, A10000000000000000000009, A10000000000000000000010, A10000000000000000000011, A10000000000000000000012, A10000000000000000000056, A10000000000000000000055, A10000000000000000000054, A10000000000000000000053, A10000000000000000000013, A10000000000000000000018, A10000000000000000000019, A10000000000000000000020, A10000000000000000000021, A10000000000000000000022, A10000000000000000000024, A10000000000000000000025, A10000000000000000000026, A10000000000000000000027, A10000000000000000000028, A10000000000000000000029, A10000000000000000000030, A10000000000000000000014, A10000000000000000000015,); runOnlyForDeploymentPostprocessing = 0; };
-		A30000000000000000000003 /* Sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000016,); runOnlyForDeploymentPostprocessing = 0; };
-		A30000000000000000000006 /* Sources */ = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000032, A10000000000000000000033, A10000000000000000000034, A10000000000000000000035, A10000000000000000000036, A10000000000000000000037, A10000000000000000000038, A10000000000000000000039, A10000000000000000000040, A10000000000000000000041, A10000000000000000000042,); runOnlyForDeploymentPostprocessing = 0; };
+		A30000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* App/MasaPortOperationApp.swift in Sources */,
+				A10000000000000000000002 /* App/AppRootView.swift in Sources */,
+				A10000000000000000000031 /* App/OperationTab.swift in Sources */,
+				A10000000000000000000003 /* Core/Configuration/AppConfiguration.swift in Sources */,
+				A10000000000000000000004 /* Core/Models/Authentication.swift in Sources */,
+				A10000000000000000000005 /* Core/Models/Operations.swift in Sources */,
+				A10000000000000000000017 /* Core/Models/EmptyResponse.swift in Sources */,
+				A10000000000000000000006 /* Core/Networking/APIClient.swift in Sources */,
+				A10000000000000000000045 /* Core/Networking/DemoAPI.swift in Sources */,
+				A10000000000000000000052 /* Features/Events/EventDetailView.swift in Sources */,
+				A10000000000000000000051 /* Features/Events/EventsView.swift in Sources */,
+				A10000000000000000000050 /* Features/Events/EventsViewModel.swift in Sources */,
+				A10000000000000000000049 /* Features/Checkin/CheckinScannerView.swift in Sources */,
+				A10000000000000000000048 /* Features/Checkin/QRCameraView.swift in Sources */,
+				A10000000000000000000047 /* Core/Models/Events.swift in Sources */,
+				A10000000000000000000046 /* Core/Models/Checkin.swift in Sources */,
+				A10000000000000000000007 /* Core/Security/KeychainStore.swift in Sources */,
+				A10000000000000000000008 /* Core/Session/SessionStore.swift in Sources */,
+				A10000000000000000000009 /* Features/Auth/LoginView.swift in Sources */,
+				A10000000000000000000010 /* Features/Today/TodayViewModel.swift in Sources */,
+				A10000000000000000000011 /* Features/Today/TodayView.swift in Sources */,
+				A10000000000000000000012 /* Features/Today/ReservationRow.swift in Sources */,
+				A10000000000000000000056 /* Features/HostDesk/HostDeskFloorView.swift in Sources */,
+				A10000000000000000000055 /* Shared/SearchHistoryStore.swift in Sources */,
+				A10000000000000000000054 /* Features/Today/TableDetailSheet.swift in Sources */,
+				A10000000000000000000053 /* Features/HostDesk/WalkInView.swift in Sources */,
+				A10000000000000000000013 /* Features/HostDesk/HostDeskView.swift in Sources */,
+				A10000000000000000000018 /* Features/HostDesk/HostDeskViewModel.swift in Sources */,
+				A10000000000000000000019 /* Features/HostDesk/ReservationDetailView.swift in Sources */,
+				A10000000000000000000020 /* Features/HostDesk/HostDeskLiveUpdates.swift in Sources */,
+				A10000000000000000000021 /* Shared/DesignSystem.swift in Sources */,
+				A10000000000000000000022 /* Features/Waitlist/WaitlistView.swift in Sources */,
+				A10000000000000000000024 /* Features/Waitlist/WaitlistViewModel.swift in Sources */,
+				A10000000000000000000025 /* Features/Waitlist/WaitlistPresentation.swift in Sources */,
+				A10000000000000000000026 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */,
+				A10000000000000000000027 /* Shared/Widget/OperationWidgetReservation.swift in Sources */,
+				A10000000000000000000028 /* Shared/Widget/OperationWidgetSnapshot.swift in Sources */,
+				A10000000000000000000029 /* Shared/Widget/OperationWidgetSnapshotStore.swift in Sources */,
+				A10000000000000000000030 /* Shared/Widget/OperationWidgetSync.swift in Sources */,
+				A10000000000000000000014 /* Features/Venue/VenueMenu.swift in Sources */,
+				A10000000000000000000015 /* Features/Profile/ProfileView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000016 /* MasaPortOperationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A30000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000032 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */,
+				A10000000000000000000033 /* Shared/Widget/OperationWidgetReservation.swift in Sources */,
+				A10000000000000000000034 /* Shared/Widget/OperationWidgetSnapshot.swift in Sources */,
+				A10000000000000000000035 /* Shared/Widget/OperationWidgetSnapshotStore.swift in Sources */,
+				A10000000000000000000036 /* MasaPortOperationWidgetBundle.swift in Sources */,
+				A10000000000000000000037 /* OperationWidgetEntry.swift in Sources */,
+				A10000000000000000000038 /* OperationWidgetProvider.swift in Sources */,
+				A10000000000000000000039 /* OperationWidgetDesign.swift in Sources */,
+				A10000000000000000000040 /* OperationWidgetMetric.swift in Sources */,
+				A10000000000000000000041 /* OperationSummaryWidgetView.swift in Sources */,
+				A10000000000000000000042 /* OperationSummaryWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A90000000000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50000000000000000000001 /* MasaPortOperation */;
+			targetProxy = A90000000000000000000001 /* PBXContainerItemProxy */;
+		};
+		A90000000000000000000004 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50000000000000000000003 /* MasaPortOperationWidget */;
+			targetProxy = A90000000000000000000003 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		A80000000000000000000001 /* Debug */ = { isa = XCBuildConfiguration; baseConfigurationReference = A20000000000000000000018 /* Debug.xcconfig */; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES; COPY_PHASE_STRIP = NO; DEBUG_INFORMATION_FORMAT = dwarf; ENABLE_TESTABILITY = YES; GCC_C_LANGUAGE_STANDARD = gnu17; GCC_OPTIMIZATION_LEVEL = 0; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_VERSION = 5.0; }; name = Debug; };
-		A80000000000000000000002 /* Release */ = { isa = XCBuildConfiguration; baseConfigurationReference = A20000000000000000000019 /* Release.xcconfig */; buildSettings = { ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; COPY_PHASE_STRIP = YES; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; ENABLE_NS_ASSERTIONS = NO; GCC_C_LANGUAGE_STANDARD = gnu17; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; }; name = Release; };
-		A80000000000000000000003 /* Debug */ = { isa = XCBuildConfiguration; baseConfigurationReference = A20000000000000000000018 /* Debug.xcconfig */; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 7P4DGRNCE6; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MasaPortOperation/Resources/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		A80000000000000000000004 /* Release */ = { isa = XCBuildConfiguration; baseConfigurationReference = A20000000000000000000019 /* Release.xcconfig */; buildSettings = { ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_ENTITLEMENTS = MasaPortOperation/Resources/MasaPortOperation.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MasaPortOperation/Resources/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
-		A80000000000000000000005 /* Debug */ = { isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = "com.masaport.operation.tests"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasaPortOperation.app/MasaPortOperation"; }; name = Debug; };
-		A80000000000000000000006 /* Release */ = { isa = XCBuildConfiguration; buildSettings = { BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = "com.masaport.operation.tests"; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasaPortOperation.app/MasaPortOperation"; }; name = Release; };
-		A80000000000000000000007 /* Debug */ = { isa = XCBuildConfiguration; buildSettings = { APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = MasaPortOperationWidget/MasaPortOperationWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = 7P4DGRNCE6; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MasaPortOperationWidget/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.debug.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Debug; };
-		A80000000000000000000008 /* Release */ = { isa = XCBuildConfiguration; buildSettings = { APPLICATION_EXTENSION_API_ONLY = YES; CODE_SIGN_ENTITLEMENTS = MasaPortOperationWidget/MasaPortOperationWidget.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = MasaPortOperationWidget/Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.widget; PRODUCT_NAME = "$(TARGET_NAME)"; SKIP_INSTALL = YES; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2"; }; name = Release; };
+		A80000000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000018 /* Debug.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A80000000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000019 /* Release.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A80000000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000018 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7P4DGRNCE6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MasaPortOperation/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A80000000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A20000000000000000000019 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = MasaPortOperation/Resources/MasaPortOperation.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MasaPortOperation/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(PRODUCT_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A80000000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasaPortOperation.app/MasaPortOperation";
+			};
+			name = Debug;
+		};
+		A80000000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MasaPortOperation.app/MasaPortOperation";
+			};
+			name = Release;
+		};
+		A80000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MasaPortOperationWidget/MasaPortOperationWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7P4DGRNCE6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MasaPortOperationWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.debug.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A80000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = MasaPortOperationWidget/MasaPortOperationWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MasaPortOperationWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A60000000000000000000001 /* Build configuration list for PBXNativeTarget "MasaPortOperation" */ = { isa = XCConfigurationList; buildConfigurations = (A80000000000000000000003, A80000000000000000000004,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "MasaPortOperationTests" */ = { isa = XCConfigurationList; buildConfigurations = (A80000000000000000000005, A80000000000000000000006,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A60000000000000000000003 /* Build configuration list for PBXProject "MasaPortOperation" */ = { isa = XCConfigurationList; buildConfigurations = (A80000000000000000000001, A80000000000000000000002,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A60000000000000000000004 /* Build configuration list for PBXNativeTarget "MasaPortOperationWidget" */ = { isa = XCConfigurationList; buildConfigurations = (A80000000000000000000007, A80000000000000000000008,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A60000000000000000000001 /* Build configuration list for PBXNativeTarget "MasaPortOperation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000003 /* Debug */,
+				A80000000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000002 /* Build configuration list for PBXNativeTarget "MasaPortOperationTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000005 /* Debug */,
+				A80000000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000003 /* Build configuration list for PBXProject "MasaPortOperation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000001 /* Debug */,
+				A80000000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A60000000000000000000004 /* Build configuration list for PBXNativeTarget "MasaPortOperationWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A80000000000000000000007 /* Debug */,
+				A80000000000000000000008 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 	};
 	rootObject = A70000000000000000000001 /* Project object */;

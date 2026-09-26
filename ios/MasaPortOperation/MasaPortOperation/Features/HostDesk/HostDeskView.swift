@@ -451,7 +451,7 @@ struct HostDeskView: View {
                 Button {
                     checkInCandidate = reservation
                 } label: {
-                    Label("Geldi", systemImage: "person.fill.checkmark")
+                    Label("Oturdu", systemImage: "person.fill.checkmark")
                 }
                 .tint(MP.positive)
             } else if reservation.isInside, let next = ServiceAction.current(for: reservation.serviceStatus).next {

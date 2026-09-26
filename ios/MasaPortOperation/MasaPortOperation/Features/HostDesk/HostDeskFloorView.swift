@@ -302,11 +302,7 @@ struct HostDeskFloorView: View {
     private func tone(for reservation: Reservation) -> MPTone {
         switch reservation.operationalState() {
         case .inside:
-            switch (reservation.serviceStatus ?? "").uppercased() {
-            case "BILL": return .attention
-            case "CLEANING": return .info
-            default: return .positive
-            }
+            return .positive
         case .overdue: return .critical
         case .now, .upcoming: return .info
         case .pending: return .attention
