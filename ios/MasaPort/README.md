@@ -23,20 +23,20 @@ otomatik olarak hedefe dahil olur, pbxproj'a elle kayıt gerekmez.
 
 ## Kullanılan public API uçları
 
-| Amaç | Uç nokta |
-|---|---|
-| Canlı vitrin | `GET /public/discovery/feed?surface=homepage\|events&city_id=` |
-| Şehir/semt sayıları | `GET /public/discovery/locations` |
-| Konumdan şehir | `GET /locations/reverse-geocode?lat=&lng=` |
-| Restoran listesi + müsaitlik | `GET /public/listings` (`date`, `start_time`, `guestCount`, `lat/lng/radius`, `listingIds`, `cuisine`, `query`) |
-| Filtre seçenekleri | `GET /public/listings/filters` |
-| Restoran detayı | `GET /public/restaurants/:slug` |
-| Slot ve müsaitlik | `GET /venues/public/:venueId?startDate=&endDate=&guestCount=` |
-| Restoran rezervasyonu | `POST /reservations` (`source: masaport_ios`) |
-| Etkinlik listesi / kategoriler / detay | `GET /public/events`, `GET /public/event-categories`, `GET /events/:id/public` |
-| Etkinlik kaydı | `POST /events/:id/instances/:instanceId/reservations` |
-| Ödeme yapılandırması / durumu | `GET /payments/config`, `GET /payments/:id/public-status` |
-| QR | `GET /qr/:uuid` (etkinlik kayıtları) |
+| Amaç                                   | Uç nokta                                                                                                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Canlı vitrin                           | `GET /public/discovery/feed?surface=homepage\|events&city_id=`                                                  |
+| Şehir/semt sayıları                    | `GET /public/discovery/locations`                                                                               |
+| Konumdan şehir                         | `GET /locations/reverse-geocode?lat=&lng=`                                                                      |
+| Restoran listesi + müsaitlik           | `GET /public/listings` (`date`, `start_time`, `guestCount`, `lat/lng/radius`, `listingIds`, `cuisine`, `query`) |
+| Filtre seçenekleri                     | `GET /public/listings/filters`                                                                                  |
+| Restoran detayı                        | `GET /public/restaurants/:slug`                                                                                 |
+| Slot ve müsaitlik                      | `GET /venues/public/:venueId?startDate=&endDate=&guestCount=`                                                   |
+| Restoran rezervasyonu                  | `POST /reservations` (`source: masaport_ios`)                                                                   |
+| Etkinlik listesi / kategoriler / detay | `GET /public/events`, `GET /public/event-categories`, `GET /events/:id/public`                                  |
+| Etkinlik kaydı                         | `POST /events/:id/instances/:instanceId/reservations`                                                           |
+| Ödeme yapılandırması / durumu          | `GET /payments/config`, `GET /payments/:id/public-status`                                                       |
+| QR                                     | `GET /qr/:uuid` (etkinlik kayıtları)                                                                            |
 
 | Hesap | `POST /customer/auth/register`, `/register/verify`, `/register/resend`, `/login`, `/refresh`, `/logout`, `/forgot-password`; `GET/PATCH /customer/auth/me`; `POST /customer/auth/change-password` |
 | Rezervasyonlarım | `GET /customer/reservations` |
