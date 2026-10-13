@@ -331,6 +331,18 @@ struct ReservationNoShowRequest: Encodable {
     }
 }
 
+/// `PUT /waitlist/entry/:id/status` rotasında mekan parametresi yoktur; yetki ara katmanı (`authorize`)
+/// mekanı gövdedeki `venue_id`'den okur. Sunucu kaydın gerçek mekanını ayrıca doğrular.
+struct WaitlistStatusUpdateRequest: Encodable {
+    let status: String
+    let venueID: Int
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case venueID = "venue_id"
+    }
+}
+
 extension Reservation {
     func updating(status: String, updatedAt: String) -> Reservation {
         Reservation(

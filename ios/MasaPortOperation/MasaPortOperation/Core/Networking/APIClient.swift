@@ -25,16 +25,42 @@ struct APIError: LocalizedError, Equatable {
     var errorDescription: String? { message }
 
     var isUnauthorized: Bool { statusCode == 401 }
+    /// `/mobile/auth/refresh` geçersiz, iptal edilmiş veya süresi dolmuş refresh token için 401 döner;
+    /// 403 de kalıcı yetki kaybıdır. 429/5xx ve ağ hataları geçicidir, oturumu kapatmaz.
+    var rejectsSession: Bool { statusCode == 401 || statusCode == 403 }
     var isConflict: Bool { statusCode == 409 || code == "RESOURCE_CONFLICT" }
 }
 
-final class APIClient {
+/// Erişim token'ı yenileme denemesinin sonucu.
+enum TokenRefreshOutcome: Equatable {
+    /// Sunucu yeni bir erişim token'ı verdi.
+    case refreshed(accessToken: String)
+    /// Sunucu refresh token'ı reddetti (iptal, süre dolumu, yetki kaybı); yerel oturum kapatılır.
+    case rejected
+    /// Ağ veya geçici sunucu hatası; oturum korunur, daha sonra yeniden denenir.
+    case unavailable
+}
+
+final class APIClient: @unchecked Sendable {
+    typealias RefreshHandler = @Sendable () async -> TokenRefreshOutcome
+
     static let shared = APIClient()
+
+    /// Kimlik doğrulama uçları erişim token'ı taşımaz; 401 aldıklarında token yenilenmez ve tekrar denenmez.
+    private static let authenticationPaths: Set<String> = [
+        "mobile/auth/login",
+        "mobile/auth/refresh",
+        "mobile/auth/logout"
+    ]
 
     private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
+    /// Token durumu hem ana aktörden hem de ağ görevlerinden okunur; erişim kilitle sıralanır.
+    private let lock = NSLock()
     private var accessToken: String?
+    private var refreshHandler: RefreshHandler?
+    private var inFlightRefresh: Task<TokenRefreshOutcome, Never>?
 
     init(session: URLSession? = nil) {
         #if DEBUG
@@ -46,8 +72,52 @@ final class APIClient {
         self.encoder = JSONEncoder()
     }
 
+    var currentAccessToken: String? {
+        lock.withLock { accessToken }
+    }
+
     func setAccessToken(_ token: String?) {
-        accessToken = token
+        lock.withLock { accessToken = token }
+    }
+
+    /// Oturum sahibi (SessionStore) refresh token'ı saklar; istemci yalnızca ne zaman yenileneceğini bilir.
+    func setRefreshHandler(_ handler: RefreshHandler?) {
+        lock.withLock { refreshHandler = handler }
+    }
+
+    /// Erişim token'ını tek uçuşta yeniler: eşzamanlı 401'ler aynı isteği bekler.
+    /// `rejectedToken` reddedilen token'dır; o arada token zaten değiştiyse ağ isteği yapılmaz.
+    func refreshAccessToken(rejecting rejectedToken: String? = nil) async -> TokenRefreshOutcome {
+        enum Step {
+            case finished(TokenRefreshOutcome)
+            case join(Task<TokenRefreshOutcome, Never>)
+        }
+        let step: Step = lock.withLock {
+            if let rejectedToken, let current = accessToken, current != rejectedToken {
+                return .finished(.refreshed(accessToken: current))
+            }
+            if let inFlightRefresh {
+                return .join(inFlightRefresh)
+            }
+            guard let refreshHandler else { return .finished(.rejected) }
+            let task = Task { await refreshHandler() }
+            inFlightRefresh = task
+            return .join(task)
+        }
+
+        let task: Task<TokenRefreshOutcome, Never>
+        switch step {
+        case .finished(let outcome):
+            return outcome
+        case .join(let pending):
+            task = pending
+        }
+        let outcome = await task.value
+        lock.withLock {
+            if inFlightRefresh == task { inFlightRefresh = nil }
+            if case .refreshed(let token) = outcome { accessToken = token }
+        }
+        return outcome
     }
 
     func get<Value: Decodable>(_ path: String) async throws -> Value {
@@ -72,6 +142,26 @@ final class APIClient {
         body: Body?
     ) async throws -> Value {
         let url = try makeURL(path: path)
+        let bodyData = try body.map { try encoder.encode($0) }
+        guard !Self.isAuthenticationPath(path) else {
+            let (data, statusCode) = try await send(url: url, method: method, body: bodyData, accessToken: nil)
+            return try decode(data, statusCode: statusCode)
+        }
+
+        // Süren bir yenileme varsa eski token'la kesin 401 almak yerine onu bekle.
+        await waitForInFlightRefresh()
+        let sentToken = currentAccessToken
+        var (data, statusCode) = try await send(url: url, method: method, body: bodyData, accessToken: sentToken)
+
+        // 401 kimlik doğrulama katmanından döner; istek işlenmemiştir, yeni token'la bir kez tekrarlanabilir.
+        if statusCode == 401, case .refreshed(let newToken) = await refreshAccessToken(rejecting: sentToken) {
+            try Task.checkCancellation()
+            (data, statusCode) = try await send(url: url, method: method, body: bodyData, accessToken: newToken)
+        }
+        return try decode(data, statusCode: statusCode)
+    }
+
+    private func send(url: URL, method: String, body: Data?, accessToken: String?) async throws -> (Data, Int) {
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -79,12 +169,13 @@ final class APIClient {
         if let accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
-        if let body {
-            request.httpBody = try encoder.encode(body)
-        }
+        request.httpBody = body
 
         let (data, response) = try await session.data(for: request)
-        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        return (data, (response as? HTTPURLResponse)?.statusCode ?? 0)
+    }
+
+    private func decode<Value: Decodable>(_ data: Data, statusCode: Int) throws -> Value {
         let envelope = try? decoder.decode(APIEnvelope<Value>.self, from: data)
 
         guard (200..<300).contains(statusCode), envelope?.success == true else {
@@ -105,6 +196,17 @@ final class APIClient {
             return empty
         }
         throw APIError(statusCode: statusCode, message: "Sunucu beklenen veriyi döndürmedi.", code: nil, requestId: envelope?.requestId)
+    }
+
+    private func waitForInFlightRefresh() async {
+        guard let task = lock.withLock({ inFlightRefresh }) else { return }
+        _ = await task.value
+    }
+
+    private static func isAuthenticationPath(_ path: String) -> Bool {
+        let normalized = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        let pathOnly = normalized.split(separator: "?", maxSplits: 1).first.map(String.init) ?? normalized
+        return authenticationPaths.contains(pathOnly)
     }
 
     private func makeURL(path: String) throws -> URL {

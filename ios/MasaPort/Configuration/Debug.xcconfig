@@ -1,5 +1,17 @@
-// Xcode-installed Debug builds use the same live services as Release.
-MASAPORT_API_BASE_URL = https:/$()/api.masaport.com/api
-MASAPORT_WEB_BASE_URL = https:/$()/www.masaport.com
-MASAPORT_BOOKING_BASE_URL = https:/$()/app.masaport.com
+// Debug derlemeleri yerel geliştirme sunucularına bağlanır; canlı veriye yazmaz.
+// Simülatör Mac'in loopback'ini paylaşır. Fiziksel cihaz Mac'e aynı Wi-Fi üzerinden,
+// DHCP ile değişmeyen Bonjour adıyla (.local) ulaşır; bunun için API, landing ve
+// Vite sunucuları tüm arayüzlerde dinlemelidir (README > Ortam).
+// Başka bir Mac veya sabit IP için Configuration/Debug.local.xcconfig (git'e girmez)
+// içinde örn. `MASAPORT_DEV_HOST[sdk=iphoneos*] = 192.168.1.20` yazın.
+MASAPORT_DEV_HOST = 127.0.0.1
+MASAPORT_DEV_HOST[sdk=iphoneos*] = Yigit-MacBook-Pro-2.local
+// Vite varsayılan olarak IPv6 loopback'te ([::1]) dinlediği için simülatörde `localhost`.
+MASAPORT_BOOKING_HOST = localhost
+MASAPORT_BOOKING_HOST[sdk=iphoneos*] = $(MASAPORT_DEV_HOST)
+#include? "Debug.local.xcconfig"
+
+MASAPORT_API_BASE_URL = http:/$()/$(MASAPORT_DEV_HOST):3000/api
+MASAPORT_WEB_BASE_URL = http:/$()/$(MASAPORT_DEV_HOST):3001
+MASAPORT_BOOKING_BASE_URL = http:/$()/$(MASAPORT_BOOKING_HOST):5173
 PRODUCT_BUNDLE_IDENTIFIER = com.masaport.app.debug

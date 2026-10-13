@@ -35,26 +35,39 @@ final class HostDeskViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
 
     private let api: APIClient
+    private var loadGate = LoadGate()
 
     init(api: APIClient = .shared) {
         self.api = api
     }
 
-    func load(venueID: Int, date: Date = .now) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
+    /// `silent`: ön plana dönüşteki arka plan tazelemesi; süren yüklemenin üstüne binmez, hata bildirimini baştan sıfırlamaz.
+    func load(venueID: Int, date: Date = .now, silent: Bool = false) async {
+        guard let generation = loadGate.begin(silent: silent) else { return }
+        if !silent {
+            isLoading = true
+            errorMessage = nil
+        }
+        defer {
+            if loadGate.isCurrent(generation) { isLoading = false }
+            loadGate.end(generation)
+        }
 
         do {
             async let loadedReservations: [Reservation] = api.get(
                 "/reservations/\(venueID)?date=\(OperationDate.apiString(date))&per_page=250&sort_by=startTime&sort_order=asc"
             )
             async let loadedTables: [VenueTable] = api.get("/tables/\(venueID)")
-            (reservations, tables) = try await (loadedReservations, loadedTables)
+            let loaded = try await (loadedReservations, loadedTables)
+            // Gün veya mekan değiştiyse geç dönen eski yanıt yeni listenin üzerine yazılmaz.
+            guard loadGate.isCurrent(generation) else { return }
+            (reservations, tables) = loaded
+            errorMessage = nil
         } catch let error as APIError {
+            guard loadGate.isCurrent(generation) else { return }
             errorMessage = error.message
         } catch {
-            guard !error.isCancellation else { return }
+            guard loadGate.isCurrent(generation), !error.isCancellation else { return }
             errorMessage = "Host Masası güncellenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -73,10 +86,11 @@ final class HostDeskViewModel: ObservableObject {
             await load(venueID: venueID, date: date)
             return true
         } catch let error as APIError {
+            // Yeniden yükleme hata bildirimini sıfırlar; mesaj yüklemeden sonra yazılır.
+            await load(venueID: venueID, date: date)
             errorMessage = error.isConflict
                 ? "Bu rezervasyon başka bir cihazda değişti. Güncel liste yüklendi."
                 : (error.detail ?? error.message)
-            await load(venueID: venueID, date: date)
             return false
         } catch {
             errorMessage = "Masa değiştirilemedi. Tekrar denemeden önce listeyi yenileyin."
@@ -97,10 +111,11 @@ final class HostDeskViewModel: ObservableObject {
             await load(venueID: venueID, date: date)
             return true
         } catch let error as APIError {
+            // Yeniden yükleme hata bildirimini sıfırlar; mesaj yüklemeden sonra yazılır.
+            await load(venueID: venueID, date: date)
             errorMessage = error.isConflict
                 ? "Bu rezervasyon başka bir cihazda değişti. Güncel liste yüklendi."
                 : (error.detail ?? error.message)
-            await load(venueID: venueID, date: date)
             return false
         } catch {
             errorMessage = "Servis durumu güncellenemedi. Tekrar denemeden önce listeyi yenileyin."
@@ -126,10 +141,11 @@ final class HostDeskViewModel: ObservableObject {
                     message: error.detail ?? "Rezervasyon saati henüz gelmedi. Erken check-in yapmak istiyor musunuz?"
                 )
             }
+            // Yeniden yükleme hata bildirimini sıfırlar; mesaj yüklemeden sonra yazılır.
+            await load(venueID: venueID, date: date)
             errorMessage = error.isConflict
                 ? "Bu rezervasyon başka bir cihazda değişti. Güncel liste yüklendi."
                 : (error.detail ?? error.message)
-            await load(venueID: venueID, date: date)
             return .failed
         } catch {
             errorMessage = "Check-in tamamlanamadı. Tekrar denemeden önce listeyi yenileyin."

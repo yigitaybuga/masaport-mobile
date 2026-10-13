@@ -87,9 +87,10 @@ struct EventDetailView: View {
             }
         }
         .refreshable { await model.load(venueID: venueID, eventID: event.id) }
-        .task {
+        // Kapıda başka cihazlardan yapılan check-in'ler için ön plana dönüşte ve dakikada bir sessiz tazeleme.
+        .operationAutoRefresh(id: event.id, every: .seconds(60)) { trigger in
             if selectedInstanceID == nil { selectedInstanceID = event.displayedInstance?.id }
-            await model.load(venueID: venueID, eventID: event.id)
+            await model.load(venueID: venueID, eventID: event.id, silent: trigger.isSilent)
         }
         .confirmationDialog(
             "Katılımcı geldi mi?",

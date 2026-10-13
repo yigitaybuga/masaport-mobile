@@ -69,6 +69,13 @@ final class DemoStore {
     private let lock = NSLock()
     private var nextReservationId = 4711
     private var reservedGuests: [Int: Int] = [:]
+    /// Ödemesi web'e devredilen masa bekletmeleri: id → (uuid, durum).
+    private var demoHolds: [Int: (uuid: String, status: String)] = [:]
+    private var nextHoldId = 900
+    /// Misafir yönetim bağlantısıyla okunan durumlar (uuid → durum).
+    private var demoGuestStatuses: [String: String] = [:]
+    private static let demoGuestToken = "demo-guest-token"
+    private static let demoAccountReservationUUID = "8b9f1c2e-4d6a-4f3b-9a1e-2c7d5e6f7a80"
     /// Demo hesabı: kayıt kodu her zaman 123456, giriş için şifre "Demo1234".
     private var demoAccounts: [String: [String: Any]] = [:]
     private var demoSessionCounter = 0
@@ -155,8 +162,33 @@ final class DemoStore {
                 "instances": instances,
             ]
         }
+        // Bilet seçenekli etkinlik: bölümler, satışa kapalı bir seçenek ve seans bazında stok.
+        func withTickets(_ base: [String: Any]) -> [String: Any] {
+            var item = base
+            let options: [[String: Any]] = [
+                ["id": "standart", "ticketType": "Standart", "category": "Tam", "sectionId": "salon", "price": 450, "capacity": NSNull(), "active": true],
+                ["id": "ogrenci", "ticketType": "Öğrenci", "category": "İndirimli", "sectionId": "salon", "price": 300, "capacity": 10, "active": true],
+                ["id": "balkon", "ticketType": "Balkon", "category": "Tam", "sectionId": "balkon", "price": 600, "capacity": 20, "active": true],
+                ["id": "davetiye", "ticketType": "Davetiye", "category": "Misafir listesi", "sectionId": NSNull(), "price": 0, "capacity": 15, "active": true],
+                ["id": "vip", "ticketType": "VIP", "category": "Sahne önü", "sectionId": NSNull(), "price": 1200, "capacity": 6, "active": false],
+            ]
+            item["ticketConfig"] = ["sections": [["id": "salon", "name": "Salon", "capacity": 40], ["id": "balkon", "name": "Balkon", "capacity": 20]], "options": options]
+            item["instances"] = ((base["instances"] as? [[String: Any]]) ?? []).enumerated().map { index, instance in
+                var copy = instance
+                let remaining = instance["available_spots"] as? Int ?? 0
+                let stock = index == 0
+                    ? ["standart": 6, "ogrenci": 0, "balkon": 3, "davetiye": 5, "vip": 0]
+                    : ["standart": 30, "ogrenci": 8, "balkon": 12, "davetiye": 15, "vip": 0]
+                copy["ticket_availability"] = options.map { option -> [String: Any] in
+                    let id = option["id"] as? String ?? ""
+                    return ["optionId": id, "available": min(stock[id] ?? 0, remaining)]
+                }
+                return copy
+            }
+            return item
+        }
         return [
-            event(101, "Caz Gecesi: Moda Trio", (1, "Konser", "konser"), 34, 1, 100, "Moda Balıkçısı", 450, 60, "photo-1511192336575-5a79af67a629", [0, 7], 21, nil),
+            withTickets(event(101, "Caz Gecesi: Moda Trio", (1, "Konser", "konser"), 34, 1, 100, "Moda Balıkçısı", 450, 60, "photo-1511192336575-5a79af67a629", [0, 7], 21, nil)),
             event(102, "Şef Masası: Omakase Akşamı", (2, "Gastronomi", "gastronomi"), 34, 2, 300, "Nara Sushi", 1800, 12, "photo-1553621042-f6e147245754", [2], 20, nil),
             event(103, "Boğaz'da Açık Hava Sineması", (3, "Sinema", "sinema"), 34, 2, nil, "Beşiktaş Sahil Parkı", nil, 200, "photo-1478720568477-152d9b164e26", [1, 2, 3], 21, nil),
             event(104, "Stand-up: Cuma Kahkahası", (4, "Sahne", "sahne"), 34, 3, nil, "Galata Sahne", 350, nil, "photo-1527224857830-43a7acc85260", [4], 20, "https://www.example-bilet.com/cuma-kahkahasi"),
@@ -273,11 +305,14 @@ final class DemoStore {
         case "GET customer/reservations":
             guard demoAuthenticatedEmail(url: url) != nil else { return fail(401, "Giriş yapman gerekiyor.", code: "CUSTOMER_AUTH_REQUIRED") }
             let tomorrow = Calendar.istanbul.date(byAdding: .day, value: 2, to: .now) ?? .now
+            let uuid = Self.demoAccountReservationUUID
+            let status = demoGuestStatuses[uuid] ?? "CONFIRMED"
             return ok(["reservations": [[
-                "kind": "restaurant", "id": 9001, "uuid": UUID().uuidString.lowercased(), "status": "CONFIRMED",
+                "kind": "restaurant", "id": 9001, "uuid": uuid, "status": status,
                 "reservation_date": DateFormat.apiDay.string(from: tomorrow), "start_time": "20:00", "end_time": "22:00",
-                "guest_count": 4, "note": NSNull(), "checked_in": false, "source": "masaport_web", "created_at": ISO8601DateFormatter().string(from: .now),
+                "guest_count": 4, "note": NSNull(), "checked_in": false, "source": "masaport_web", "created_at": "2026-10-01T09:00:00.000Z",
                 "customer_name": "Demo Misafir",
+                "management_url": ["PENDING", "CONFIRMED"].contains(status) ? demoManagementURL(uuid: uuid) as Any : NSNull(),
                 "venue": ["id": 100, "name": "Moda Balıkçısı", "logo": NSNull(), "address": "Moda Cad. No: 12, Kadıköy", "phone": "+90 216 555 00 01", "timezone": "Europe/Istanbul", "latitude": 40.9789, "longitude": 29.0263, "listing_slug": "moda-balikcisi", "image": "https://images.unsplash.com/photo-1544148103-0773bf10d330?w=1200&q=80"],
             ]]])
         default:
@@ -303,6 +338,21 @@ final class DemoStore {
         }
         if method == "POST", segments.count == 5, segments[0] == "events", segments[2] == "instances", segments[4] == "reservations" {
             return createEventReservation(eventId: Int(segments[1]) ?? 0, instanceId: Int(segments[3]) ?? 0, body: body)
+        }
+        if method == "POST", segments.count == 4, segments[0] == "reservations", segments[1] == "holds", segments[3] == "cancel" {
+            let payload = (try? JSONSerialization.jsonObject(with: body) as? [String: Any]) ?? [:]
+            guard let id = Int(segments[2]), let hold = demoHolds[id], hold.uuid == payload["hold_uuid"] as? String else {
+                return fail(404, "Reservation hold not found", code: "holdInvalid")
+            }
+            guard hold.status == "ACTIVE" else { return ok(["holdId": id, "status": hold.status, "cancelled": false]) }
+            demoHolds[id] = (hold.uuid, "CANCELLED")
+            return ok(["holdId": id, "status": "CANCELLED", "cancelled": true])
+        }
+        if method == "GET", segments.count == 4, segments[0] == "public", segments[1] == "reservations", segments[3] == "manage" {
+            guard DemoURLProtocol.currentAuthorization == "Bearer \(Self.demoGuestToken)" else {
+                return fail(403, "Rezervasyon bağlantısı geçersiz.", code: "INVALID_MANAGEMENT_LINK")
+            }
+            return ok(["uuid": segments[2], "status": demoGuestStatuses[segments[2]] ?? "CONFIRMED"])
         }
         return fail(404, "Not found: \(path)")
     }
@@ -390,14 +440,39 @@ final class DemoStore {
         return ["listings": page, "restaurants": page, "pagination": ["total": formatted.count, "limit": limit, "offset": offset, "hasMore": offset + limit < formatted.count, "currentPage": offset / max(limit, 1) + 1, "totalPages": max(1, (formatted.count + limit - 1) / limit)]]
     }
 
+    /// Slotun rezervasyon kuralı. `onDate` verilirse o tarihe özel kural uygulanır: Moda Balıkçısı'nda
+    /// 21:00 seansı caz gecesidir ve kart provizyonu ister (haftalık şablonda yoktur).
+    private func demoRule(for item: [String: Any], time: String, guests: Int, onDate: Bool) -> [String: Any] {
+        let venueId = (item["venue"] as? [String: Any])?["id"] as? Int ?? 0
+        let chargesPrepayment = time == "20:30" && (item["priceRange"] as? String) == "₺₺₺₺"
+        let eventNight = onDate && venueId == 100 && time == "21:00"
+        let requestOnly = time == "22:00"
+        var rule: [String: Any] = [
+            "booking_mode": requestOnly ? "REQUEST_ONLY" : "STANDARD", "requires_manual_approval": requestOnly,
+            "booking_message": requestOnly ? "Geç saat rezervasyonları mekan onayıyla kesinleşir." : NSNull(),
+            "minimum_spend_required": false, "minimum_spend_amount": 0, "minimum_spend_summary": NSNull(),
+            "prepayment_required": false, "prepayment_mode": "DEFAULT", "prepayment_amount": 0, "prepayment_total_amount": 0,
+            "prepayment_summary": NSNull(), "prepayment_capture_mode": "CHARGE", "effective_rule_id": NSNull(), "effective_rule_name": NSNull(),
+        ]
+        if chargesPrepayment {
+            rule.merge(["prepayment_required": true, "prepayment_mode": "PER_GUEST", "prepayment_amount": 500, "prepayment_total_amount": 500 * guests, "prepayment_summary": "Kişi başı 500 TL"]) { $1 }
+        }
+        if eventNight {
+            rule.merge(["prepayment_required": true, "prepayment_mode": "PER_GUEST", "prepayment_amount": 250, "prepayment_total_amount": 250 * guests, "prepayment_summary": "Kişi başı 250 TL kart provizyonu", "prepayment_capture_mode": "PREAUTH", "effective_rule_id": 7, "effective_rule_name": "Caz gecesi"]) { $1 }
+        }
+        return rule
+    }
+
     private func availability(for item: [String: Any], query: [String: String]) -> [String: Any] {
         let venue = item["venue"] as? [String: Any] ?? [:]
         let times = (item["_times"] as? [String]) ?? ["19:00", "20:00"]
+        let guests = max(1, Int(query["guestCount"] ?? "") ?? 2)
         let base = ["12:00", "12:30", "13:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "22:00"]
         let allTimes = Array(Set(base + times)).sorted()
         func slot(_ index: Int, _ time: String) -> [String: Any] {
             let hour = Int(time.prefix(2)) ?? 19
-            return ["id": (venue["id"] as? Int ?? 0) * 10 + index, "start_time": time, "end_time": String(format: "%02d:%@", (hour + 2) % 24, time.suffix(2) as CVarArg), "duration_minutes": 120, "uses_venue_default_duration": true, "is_end_time_derived": true, "minimum_duration_minutes": NSNull(), "is_minimum_duration_applied": false, "max_reservations_in_slot": 10, "max_guests_in_slot": 40, "booking_mode": time == "22:00" ? "REQUEST_ONLY" : "STANDARD", "requires_manual_approval": time == "22:00", "booking_message": time == "22:00" ? "Geç saat rezervasyonları mekan onayıyla kesinleşir." : NSNull(), "minimum_spend_required": false, "minimum_spend_amount": 0, "minimum_spend_summary": NSNull(), "prepayment_required": time == "20:30" && (item["priceRange"] as? String) == "₺₺₺₺", "prepayment_mode": "DEFAULT", "prepayment_amount": 0, "prepayment_total_amount": 0, "prepayment_summary": time == "20:30" && (item["priceRange"] as? String) == "₺₺₺₺" ? "Kişi başı 500 ₺ ön ödeme alınır." : NSNull(), "effective_rule_id": NSNull(), "effective_rule_name": NSNull(), "pacing_interval_minutes": NSNull(), "max_pacing_reservations_per_interval": NSNull(), "max_pacing_guests_per_interval": NSNull()]
+            let shape: [String: Any] = ["id": (venue["id"] as? Int ?? 0) * 10 + index, "start_time": time, "end_time": String(format: "%02d:%@", (hour + 2) % 24, time.suffix(2) as CVarArg), "duration_minutes": 120, "uses_venue_default_duration": true, "is_end_time_derived": true, "minimum_duration_minutes": NSNull(), "is_minimum_duration_applied": false, "max_reservations_in_slot": 10, "max_guests_in_slot": 40, "pacing_interval_minutes": NSNull(), "max_pacing_reservations_per_interval": NSNull(), "max_pacing_guests_per_interval": NSNull()]
+            return shape.merging(demoRule(for: item, time: time, guests: guests, onDate: false)) { $1 }
         }
         let daySlots = allTimes.enumerated().map { slot($0.offset, $0.element) }
         var slotsByDay: [String: Any] = [:]
@@ -407,7 +482,9 @@ final class DemoStore {
         for s in daySlots {
             let time = s["start_time"] as? String ?? ""
             let full = !times.contains(time) && Int(time.prefix(2)).map { $0 >= 18 } == true
-            slotStatus[String(s["id"] as? Int ?? 0)] = ["is_full": full, "is_blocked": false, "is_blocked_by_time": false, "available_guest_capacity": full ? 0 : 12, "available_tables": full ? 0 : 3]
+            // API gibi: tarihli slot, doluluğun yanında o tarihte geçerli kuralı da taşır.
+            let status: [String: Any] = ["start_time": time, "end_time": s["end_time"] ?? NSNull(), "duration_minutes": 120, "is_full": full, "is_blocked": false, "is_blocked_by_time": false, "available_guest_capacity": full ? 0 : 12, "available_tables": full ? 0 : 3]
+            slotStatus[String(s["id"] as? Int ?? 0)] = status.merging(demoRule(for: item, time: time, guests: guests, onDate: true)) { $1 }
         }
         return ["id": venue["id"] ?? 0, "name": venue["name"] ?? "", "timezone": "Europe/Istanbul", "texts": [["id": 1, "title": "KVKK Aydınlatma Metni", "type": "kvkk", "content": "Rezervasyon sürecinde paylaştığınız ad, telefon ve e-posta bilgileri yalnızca rezervasyonunuzu yönetmek ve sizi bilgilendirmek amacıyla işlenir; üçüncü taraflarla paylaşılmaz."]], "slots": slotsByDay, "blocked_dates": [], "availability": [startDate: ["is_blocked": false, "is_day_full": false, "slots": slotStatus]], "isSubscriptionActive": true]
     }
@@ -425,9 +502,31 @@ final class DemoStore {
         if (payload["customer_name"] as? String)?.lowercased().contains("dolu") == true {
             return fail(409, "Seçilen tarih ve saat aralığında yeterli masa bulunamadı. Lütfen başka bir saat deneyin.")
         }
+        let guests = payload["guest_count"] as? Int ?? 2
+        let rule = demoRule(for: item, time: time, guests: guests, onDate: true)
+        if rule["prepayment_required"] as? Bool == true {
+            let amount = rule["prepayment_total_amount"] as? Int ?? 0
+            // Ödeme sağlayıcısı demo modunda kart bilgisi ister: hesaplı akış bekletme alır, hesapsız istek reddedilir.
+            guard payload["payment_handoff"] as? Bool == true else {
+                return (400, (try? JSONSerialization.data(withJSONObject: ["success": false, "error": "Payment information is required for this venue", "requiresPayment": true, "amount": amount])) ?? Data())
+            }
+            guard demoAuthenticatedEmail(url: URL(string: "demo://")!) != nil else {
+                return fail(401, "Ödeme aktarımı için müşteri oturumu gereklidir.", code: "CUSTOMER_AUTH_REQUIRED")
+            }
+            nextHoldId += 1
+            let uuid = UUID().uuidString.lowercased()
+            demoHolds[nextHoldId] = (uuid, "ACTIVE")
+            // API ile aynı: bu cevap tek sarmallıdır (data.data yoktur).
+            return ok(["requires_payment": true, "amount": amount, "reservationHoldId": nextHoldId, "reservationHoldUuid": uuid, "holdExpiresAt": ISO8601DateFormatter().string(from: Date().addingTimeInterval(300))], status: 201, message: "Rezervasyon ödeme tamamlanana kadar bekletiliyor.")
+        }
         nextReservationId += 1
         let pending = time == "22:00"
-        return ok(["success": true, "message": "Reservation created successfully", "data": ["reservation_id": nextReservationId, "reservation_uuid": UUID().uuidString.lowercased(), "reservation_status": pending ? "PENDING" : "CONFIRMED", "table_ids": [3], "start_time": time, "end_time": String(format: "%02d:%@", ((Int(time.prefix(2)) ?? 19) + 2) % 24, time.suffix(2) as CVarArg), "requires_manual_approval": pending, "booking_mode": pending ? "REQUEST_ONLY" : "STANDARD", "booking_message": pending ? "Mekan en geç 2 saat içinde onaylayacak." : NSNull(), "requires_payment": false, "amount": 0, "minimum_spend_required": false, "minimum_spend_amount": 0, "minimum_spend_summary": NSNull(), "minimum_duration_minutes": NSNull(), "prepayment_mode": "DEFAULT", "prepayment_summary": NSNull()]], status: 201)
+        let uuid = UUID().uuidString.lowercased()
+        return ok(["success": true, "message": "Reservation created successfully", "data": ["reservation_id": nextReservationId, "reservation_uuid": uuid, "management_url": demoManagementURL(uuid: uuid), "reservation_status": pending ? "PENDING" : "CONFIRMED", "table_ids": [3], "start_time": time, "end_time": String(format: "%02d:%@", ((Int(time.prefix(2)) ?? 19) + 2) % 24, time.suffix(2) as CVarArg), "requires_manual_approval": pending, "booking_mode": pending ? "REQUEST_ONLY" : "STANDARD", "booking_message": pending ? "Mekan en geç 2 saat içinde onaylayacak." : NSNull(), "requires_payment": false, "amount": 0, "minimum_spend_required": false, "minimum_spend_amount": 0, "minimum_spend_summary": NSNull(), "minimum_duration_minutes": NSNull(), "prepayment_mode": "DEFAULT", "prepayment_summary": NSNull()]], status: 201)
+    }
+
+    private func demoManagementURL(uuid: String) -> String {
+        AppConfiguration.bookingBaseURL.appending(path: "public/reservation/manage/\(uuid)").absoluteString + "#token=\(Self.demoGuestToken)"
     }
 
     private func eventsResponse(_ query: [String: String]) -> [String: Any] {
@@ -463,6 +562,17 @@ final class DemoStore {
         }
         guard let event = events.first(where: { ($0["id"] as? Int) == eventId }) else { return fail(404, "Event not found") }
         let guests = payload["guest_count"] as? Int ?? 1
+        // API gibi: bilet seçenekli etkinlikte satıştaki bir seçenek zorunlu, ücretli bilet kart bilgisi ister.
+        if let options = (event["ticketConfig"] as? [String: Any])?["options"] as? [[String: Any]], !options.isEmpty {
+            guard let option = options.first(where: { ($0["id"] as? String) == payload["ticket_option_id"] as? String && $0["active"] as? Bool == true }) else {
+                return fail(400, "Lütfen satışa açık bir bilet seçeneği seçin.", code: "INVALID_EVENT_TICKET")
+            }
+            if (option["price"] as? Int ?? 0) > 0 {
+                return (400, (try? JSONSerialization.data(withJSONObject: ["success": false, "error": "Payment information is required for this event", "requiresPayment": true])) ?? Data())
+            }
+        } else if payload["ticket_option_id"] != nil {
+            return fail(400, "Bu etkinlikte bilet seçeneği bulunmuyor.", code: "INVALID_EVENT_TICKET")
+        }
         if let capacity = event["maxCapacity"] as? Int, (reservedGuests[instanceId] ?? 0) + guests > capacity {
             return fail(409, "Etkinlik için ayrılan kontenjan doldu")
         }
@@ -501,8 +611,9 @@ final class DemoStore {
 
     // MARK: Yardımcılar
 
-    private func ok(_ data: Any, status: Int = 200) -> (Int, Data) {
-        let envelope: [String: Any] = ["success": true, "data": data]
+    private func ok(_ data: Any, status: Int = 200, message: String? = nil) -> (Int, Data) {
+        var envelope: [String: Any] = ["success": true, "data": data]
+        if let message { envelope["message"] = message }
         return (status, (try? JSONSerialization.data(withJSONObject: envelope)) ?? Data())
     }
 

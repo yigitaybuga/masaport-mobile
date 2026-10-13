@@ -19,6 +19,8 @@ struct AppRootView: View {
 }
 
 private struct LaunchingView: View {
+    @EnvironmentObject private var session: SessionStore
+
     var body: some View {
         ZStack {
             MP.heroGradient.ignoresSafeArea()
@@ -32,13 +34,32 @@ private struct LaunchingView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(MP.onHeroSecondary)
                 }
-                ProgressView()
-                    .tint(.white)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("MasaPort Operasyon")
+                if let launchIssue = session.launchIssue, !session.isRestoring {
+                    // Çevrimdışı açılışta oturum silinmez; bağlantı gelince otomatik olarak tekrar denenir.
+                    VStack(spacing: 12) {
+                        Text(launchIssue)
+                            .font(.subheadline)
+                            .foregroundStyle(MP.onHeroSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Tekrar dene") {
+                            Task { await session.retryRestore() }
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .tint(.white)
+                    }
+                    .padding(.horizontal, 40)
                     .padding(.top, 8)
+                } else {
+                    ProgressView()
+                        .tint(.white)
+                        .padding(.top, 8)
+                        .accessibilityLabel("Oturum kontrol ediliyor")
+                }
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("MasaPort Operasyon, oturum kontrol ediliyor")
     }
 }
 

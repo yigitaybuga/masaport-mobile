@@ -62,6 +62,7 @@
 		A10000000000000000000053 /* Features/HostDesk/WalkInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */; };
 		A10000000000000000000054 /* Features/Today/TableDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */; };
 		A10000000000000000000055 /* Shared/SearchHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000058 /* Shared/SearchHistoryStore.swift */; };
+		A10000000000000000000057 /* Shared/AutoRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000060 /* Shared/AutoRefresh.swift */; };
 		A10000000000000000000056 /* Features/HostDesk/HostDeskFloorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */; };
 /* End PBXBuildFile section */
 
@@ -155,6 +156,7 @@
 		A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/WalkInView.swift; sourceTree = "<group>"; };
 		A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Today/TableDetailSheet.swift; sourceTree = "<group>"; };
 		A20000000000000000000058 /* Shared/SearchHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SearchHistoryStore.swift; sourceTree = "<group>"; };
+		A20000000000000000000060 /* Shared/AutoRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AutoRefresh.swift; sourceTree = "<group>"; };
 		A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskFloorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -221,6 +223,7 @@
 				A20000000000000000000012 /* Features/Today/ReservationRow.swift */,
 				A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */,
 				A20000000000000000000058 /* Shared/SearchHistoryStore.swift */,
+				A20000000000000000000060 /* Shared/AutoRefresh.swift */,
 				A20000000000000000000057 /* Features/Today/TableDetailSheet.swift */,
 				A20000000000000000000056 /* Features/HostDesk/WalkInView.swift */,
 				A20000000000000000000013 /* Features/HostDesk/HostDeskView.swift */,
@@ -434,6 +437,7 @@
 				A10000000000000000000012 /* Features/Today/ReservationRow.swift in Sources */,
 				A10000000000000000000056 /* Features/HostDesk/HostDeskFloorView.swift in Sources */,
 				A10000000000000000000055 /* Shared/SearchHistoryStore.swift in Sources */,
+				A10000000000000000000057 /* Shared/AutoRefresh.swift in Sources */,
 				A10000000000000000000054 /* Features/Today/TableDetailSheet.swift in Sources */,
 				A10000000000000000000053 /* Features/HostDesk/WalkInView.swift in Sources */,
 				A10000000000000000000013 /* Features/HostDesk/HostDeskView.swift in Sources */,

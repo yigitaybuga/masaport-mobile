@@ -141,6 +141,16 @@ final class PublicAPI {
         return created
     }
 
+    /// Ödemesi tamamlanmayan masa bekletmesini bırakır. Sunucu rezervasyona dönüşmüş bekletmeyi iptal etmez.
+    func cancelReservationHold(id: Int, uuid: String, reason: String = "flow_reset") async throws -> ReservationHoldCancelResult {
+        try await client.post("/reservations/holds/\(id)/cancel", body: ReservationHoldCancelRequest(holdUuid: uuid, reason: reason))
+    }
+
+    /// İmzalı misafir bağlantısının token'ıyla rezervasyonun güncel durumunu okur (giriş gerektirmez).
+    func guestManagedReservation(uuid: String, token: String) async throws -> GuestManagedReservation {
+        try await client.get("/public/reservations/\(uuid)/manage", auth: .bearer(token))
+    }
+
     // MARK: Etkinlikler
 
     func events(_ query: EventsQuery) async throws -> EventsPage {
@@ -233,6 +243,32 @@ final class PublicAPI {
     func customerReservations() async throws -> [CustomerReservation] {
         let envelope: CustomerReservationsEnvelope = try await client.get("/customer/reservations", auth: .required)
         return envelope.reservations
+    }
+
+    // MARK: Favoriler
+
+    func favorites() async throws -> [CustomerFavorite] {
+        let envelope: CustomerFavoritesEnvelope = try await client.get("/customer/favorites", auth: .required)
+        return envelope.favorites
+    }
+
+    /// Cihazdaki favorileri hesaba ekler (silmez) ve hesabın birleşik listesini döner.
+    func syncFavorites(listingIds: [Int], eventIds: [Int]) async throws -> [CustomerFavorite] {
+        let envelope: CustomerFavoritesEnvelope = try await client.post(
+            "/customer/favorites/sync",
+            body: FavoritesSyncRequest(listingIds: listingIds, eventIds: eventIds),
+            auth: .required
+        )
+        return envelope.favorites
+    }
+
+    func setFavorite(kind: FavoritesStore.Item.Kind, id: Int, favorite: Bool) async throws {
+        let path = "/customer/favorites/\(kind == .listing ? "listings" : "events")/\(id)"
+        if favorite {
+            let _: EmptyResponse = try await client.getRaw(path, method: "PUT", body: EmptyBody(), auth: .required)
+        } else {
+            let _: EmptyResponse = try await client.delete(path, body: Optional<String>.none, auth: .required)
+        }
     }
 
     // MARK: Ödeme

@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Sekmeler arasında paylaşılan gezinme hedefleri.
 enum AppRoute: Hashable {
-    case listing(slug: String)
+    /// `prefill` yalnızca kısa rezervasyon bağlantısından gelir; detay açılınca rezervasyon akışı başlar.
+    case listing(slug: String, prefill: BookingPrefill? = nil)
     case eventByID(id: Int)
     case eventByIdentifier(identifier: String)
     case listings(ListingsPreset)
@@ -12,7 +13,7 @@ enum AppRoute: Hashable {
 }
 
 enum AppDeepLink: Hashable {
-    case listing(slug: String)
+    case listing(slug: String, prefill: BookingPrefill? = nil)
     case event(identifier: String)
 
     var tab: AppTab {
@@ -24,7 +25,7 @@ enum AppDeepLink: Hashable {
 
     var route: AppRoute {
         switch self {
-        case .listing(let slug): .listing(slug: slug)
+        case .listing(let slug, let prefill): .listing(slug: slug, prefill: prefill)
         case .event(let identifier):
             if let id = Int(identifier) {
                 .eventByID(id: id)
@@ -49,23 +50,71 @@ enum AppDeepLink: Hashable {
         }
         segments += url.path.split(separator: "/").map(String.init)
 
+        // Boş veya yalnızca boşluktan oluşan parçalar (`/istanbul/restoranlar/`, `/etkinlikler/%20`) rota üretmez.
+        func identifier(at index: Int) -> String? {
+            guard segments.indices.contains(index) else { return nil }
+            let value = segments[index].trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.isEmpty || value == "." || value == ".." ? nil : value
+        }
+
         guard let first = segments.first else { return nil }
-        if (first == "restaurant" || first == "listing"), let slug = segments.dropFirst().first, !slug.isEmpty {
-            return .listing(slug: slug)
+        // Kısa rezervasyon bağlantısı: slug, restoranın listing slug'ıdır (eski slug'lar sunucuda yönlendirilir).
+        if first == "r", let slug = identifier(at: 1) {
+            let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            return .listing(slug: slug, prefill: BookingPrefill(queryItems: items))
         }
-        if first == "event", let identifier = segments.dropFirst().first, !identifier.isEmpty {
-            return .event(identifier: identifier)
+        if first == "restaurant" || first == "listing" {
+            return identifier(at: 1).map { .listing(slug: $0) }
         }
-        if segments.count >= 3, segments[1] == "restoranlar", !segments[2].isEmpty {
-            return .listing(slug: segments[2])
+        if first == "event" {
+            return identifier(at: 1).map { .event(identifier: $0) }
         }
-        if segments.count >= 3, segments[1] == "etkinlikler", !segments[2].isEmpty {
-            return .event(identifier: segments[2])
+        if segments.count >= 2, segments[1] == "restoranlar" {
+            return identifier(at: 2).map { .listing(slug: $0) }
         }
-        if first == "etkinlikler", let identifier = segments.dropFirst().first, !identifier.isEmpty {
-            return .event(identifier: identifier)
+        if segments.count >= 2, segments[1] == "etkinlikler" {
+            return identifier(at: 2).map { .event(identifier: $0) }
+        }
+        if first == "etkinlikler" {
+            return identifier(at: 1).map { .event(identifier: $0) }
         }
         return nil
+    }
+}
+
+/// Kısa rezervasyon bağlantısındaki (`/r/{slug}?date=&time=&guests=`) ön seçim.
+/// Geçersiz veya seçilebilir aralık dışındaki değerler sessizce yok sayılır.
+struct BookingPrefill: Hashable {
+    /// Gün şeridiyle aynı: bugünden itibaren 14 gün seçilebilir.
+    static let bookableDays = 14
+    static let guestRange = 1...12
+
+    var date: Date?
+    var time: String?
+    var guests: Int?
+
+    init(date: Date? = nil, time: String? = nil, guests: Int? = nil) {
+        self.date = date
+        self.time = time
+        self.guests = guests
+    }
+
+    init(queryItems: [URLQueryItem], now: Date = .now, calendar: Calendar = .istanbul) {
+        func value(_ name: String) -> String? {
+            queryItems.first { $0.name == name }?.value?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+        }
+        if let raw = value("date"), raw.wholeMatch(of: #/\d{4}-\d{2}-\d{2}/#) != nil,
+           let day = DateFormat.parseAPIDay(raw), DateFormat.apiDay.string(from: day) == raw {
+            let today = calendar.startOfDay(for: now)
+            let last = calendar.date(byAdding: .day, value: Self.bookableDays - 1, to: today) ?? today
+            if day >= today, day <= last { date = day }
+        }
+        if let raw = value("time"), raw.wholeMatch(of: #/([01]\d|2[0-3]):[0-5]\d/#) != nil {
+            time = raw
+        }
+        if let raw = value("guests"), let count = Int(raw), Self.guestRange.contains(count) {
+            guests = count
+        }
     }
 }
 
@@ -141,8 +190,8 @@ extension View {
     func appRoutes() -> some View {
         navigationDestination(for: AppRoute.self) { route in
             switch route {
-            case .listing(let slug):
-                RestaurantDetailView(slug: slug)
+            case .listing(let slug, let prefill):
+                RestaurantDetailView(slug: slug, prefill: prefill)
             case .eventByID(id: let id):
                 EventDetailView(eventID: id)
             case .eventByIdentifier(identifier: let identifier):

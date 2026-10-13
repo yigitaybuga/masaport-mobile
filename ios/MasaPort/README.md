@@ -33,13 +33,15 @@ otomatik olarak hedefe dahil olur, pbxproj'a elle kayıt gerekmez.
 | Restoran detayı                        | `GET /public/restaurants/:slug`                                                                                 |
 | Slot ve müsaitlik                      | `GET /venues/public/:venueId?startDate=&endDate=&guestCount=`                                                   |
 | Restoran rezervasyonu                  | `POST /reservations` (`source: masaport_ios`)                                                                   |
+| Bekletmeyi bırakma                     | `POST /reservations/holds/:holdId/cancel` (`hold_uuid`; rezervasyona dönüşmüş bekletmeye dokunmaz)               |
+| Misafir rezervasyon durumu             | `GET /public/reservations/:uuid/manage` (yönetim bağlantısındaki token ile Bearer)                              |
 | Etkinlik listesi / kategoriler / detay | `GET /public/events`, `GET /public/event-categories`, `GET /events/:id/public`                                  |
 | Etkinlik kaydı                         | `POST /events/:id/instances/:instanceId/reservations`                                                           |
 | Ödeme yapılandırması / durumu          | `GET /payments/config`, `GET /payments/:id/public-status`                                                       |
 | QR                                     | `GET /qr/:uuid` (etkinlik kayıtları)                                                                            |
 
 | Hesap | `POST /customer/auth/register`, `/register/verify`, `/register/resend`, `/login`, `/refresh`, `/logout`, `/forgot-password`; `GET/PATCH /customer/auth/me`; `POST /customer/auth/change-password` |
-| Rezervasyonlarım | `GET /customer/reservations` |
+| Rezervasyonlarım | `GET /customer/reservations` (restoran kayıtlarında `management_url`) |
 
 ## Hesap ve oturum
 
@@ -57,7 +59,15 @@ Varsayılan sağlayıcı kart bilgisi istediğinden (`requiresCardDetails: true`
 restoranlarda tarih, saat, kişi ve iletişim bilgileri uygulamada alınır; yalnızca kart ve
 3D Secure adımı `app.masaport.com` üzerindeki güvenli web akışına `SFSafariViewController`
 ile devredilir. Giriş yapılmış kullanıcıda ödeme öncesi masa bekletmesi API üzerinden
-oluşturulur ve kullanıcı hesabına bağlı kalır. Ücretli etkinlikler de aynı güvenli web akışını kullanır.
+oluşturulur ve kullanıcı hesabına bağlı kalır. Web ödeme sayfası kapatılınca uygulama
+rezervasyonun hesaba düşüp düşmediğini kontrol eder; düşmediyse kısa bir bekleme süresinden sonra
+bekletmeyi bırakır. Slot rozetleri, tutarlar ve web'e aktarılan parametreler haftalık şablondan değil,
+`availability[tarih].slots[id]` içindeki o tarihe özel kuraldan gelir; `prepayment_capture_mode: PREAUTH`
+olan saatlerde "Kart provizyonu" gösterilir (tutar çekilmez, kartta bloke edilir).
+Ücretli etkinlikler de aynı güvenli web akışını kullanır. Bilet seçenekli etkinliklerde (`ticketConfig`)
+bilet uygulamada seçilir ve `ticket_option_id` gönderilir; ücretli bilet web'e devredilir.
+Uygulamadan yapılan restoran rezervasyonlarında "Rezervasyonu yönet" iptal/değişiklik talebi için
+app.masaport'taki imzalı misafir sayfasını açar.
 `GET /payments/config` hosted bir sağlayıcı bildirirse
 (`requiresCardDetails: false`) uygulama doğrudan `checkoutUrl` açar ve `public-status` ucunu
 yoklayarak sonucu yerel kayda işler. Harici bilet siteleri (`ticket_url`) doğrudan açılır.
@@ -68,20 +78,40 @@ yoklayarak sonucu yerel kayda işler. Harici bilet siteleri (`ticket_url`) doğr
 (`http://127.0.0.1:3001`) ve web'e devredilen rezervasyon/ödeme akışını
 (`http://localhost:5173`) kullanır. Vite geliştirme sunucusu varsayılan olarak
 IPv6 loopback (`[::1]`) üzerinde dinlediği için rezervasyon adresinde `localhost`
-kullanılır. Bu loopback adresleri iOS Simulator içindir;
-fiziksel cihazda Mac'in ağ adresi veya güvenilir bir HTTPS geliştirme adresi gerekir.
+kullanılır. Bu loopback adresleri iOS Simulator içindir.
+
+Fiziksel cihazdaki Debug derlemesi Mac'e aynı Wi-Fi üzerinden, DHCP ile değişmeyen
+Bonjour adıyla (`Yigit-MacBook-Pro-2.local`) ulaşır. Bunun için sunucular tüm
+arayüzlerde dinlemelidir (landing: `npm run dev -- -p 3001 -H 0.0.0.0`, Vite:
+`npm run dev -- --host`) ve ilk açılışta iOS'un yerel ağ iznine onay verilmelidir.
+Web'e devredilen ödeme sayfası telefonda açıldığında `app.masaport` kendi API adresini
+(`VITE_API_URL`) kullanır; o adres `localhost` ise cihazdaki ödeme adımı yerelde
+tamamlanamaz. Başka bir Mac veya sabit IP için git'e girmeyen
+`Configuration/Debug.local.xcconfig` dosyasına örneğin
+`MASAPORT_DEV_HOST[sdk=iphoneos*] = 192.168.1.20` yazın.
+
 Release yapılandırması sırasıyla `https://api.masaport.com/api`, `https://www.masaport.com`
 ve `https://app.masaport.com` production adreslerini kullanır.
 
 ## Universal Links ve deep link
 
-`https://masaport.com/restaurant/:slug`, `/:city/restoranlar/:slug`,
+`https://masaport.com/restaurant/:slug`, `/:city/restoranlar/:slug`, kısa rezervasyon bağlantısı
+`/r/:slug?date=&time=&guests=` (restoran detayı açılır ve rezervasyon akışı ön seçimle başlar),
 `https://masaport.com/etkinlikler/:id|:slug` ve şehirli etkinlik URL'leri uygulama
 yüklüyse ilgili detay ekranını açar; uygulama yoksa aynı web sayfası çalışmaya devam eder.
 İlişkilendirme için `MasaPort/MasaPort.entitlements` içindeki Associated Domains ve
 landing projesindeki `public/.well-known/apple-app-site-association` birlikte deploy
 edilmelidir. `masaport://restaurant/:slug` ve `masaport://event/:id` özel şemaları da
 geriye dönük olarak desteklenir.
+
+Associated Domains Release'te ve Debug'ın simülatör derlemesinde bağlıdır; Debug cihaz
+kurulumunda bilerek bağlı değildir (imzalama profili gerektirir). Cihazlar AASA dosyasını
+Apple'ın CDN'inden alır; `masaport.com` (www'suz) adresi Cloudflare'de `www`'ya 301 verse
+de CDN'de iki alan adı için de dosya bulunur (2026-10-12'de doğrulandı). AASA değişikliği
+deploy edildikten sonra CDN'in güncellenmesi zaman alabilir; kontrol için:
+`curl https://app-site-association.cdn-apple.com/a/v1/www.masaport.com` (ve `masaport.com`).
+Simülatörde deneme:
+`xcrun simctl openurl booted https://www.masaport.com/istanbul/restoranlar/<slug>`.
 
 ## Demo modu (yalnızca Debug)
 

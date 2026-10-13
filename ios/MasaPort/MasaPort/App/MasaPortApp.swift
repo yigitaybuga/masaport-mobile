@@ -10,6 +10,7 @@ struct MasaPortApp: App {
                 .environment(model)
                 .tint(MP.brand)
                 .task { await model.bootstrap() }
+                .task(id: model.customerSession.account?.id) { await model.syncFavoritesWithAccount() }
         }
     }
 }

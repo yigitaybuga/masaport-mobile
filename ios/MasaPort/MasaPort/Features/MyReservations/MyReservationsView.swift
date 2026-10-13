@@ -79,7 +79,7 @@ struct MyReservationsView: View {
                     }
                     Section {
                         Text(model.customerSession.isLoggedIn
-                             ? "Hesabına bağlı rezervasyonlar ve bu cihazda yaptıkların birlikte listelenir. İptal ve değişiklik için mekanı arayabilirsin."
+                             ? "Hesabına bağlı rezervasyonlar ve bu cihazda yaptıkların birlikte listelenir. İptal veya değişiklik talebini rezervasyonun detayından iletebilirsin."
                              : "Bu liste cihazında saklanır. Giriş yaparsan rezervasyonlarını tüm cihazlarında görebilirsin.")
                             .font(.footnote)
                             .foregroundStyle(Color(.secondaryLabel))
@@ -107,7 +107,8 @@ struct MyReservationsView: View {
         .sheet(isPresented: $showLogin) {
             NavigationStack { LoginView() }
         }
-        .task(id: model.customerSession.account?.id) {
+        // Hesap değişince veya rezervasyon web'de yönetildikten sonra (iptal/değişiklik) yeniden yüklenir.
+        .task(id: "\(model.customerSession.account?.id ?? 0)-\(model.reservationsRevision)") {
             await loadRemote()
         }
     }
@@ -136,6 +137,8 @@ struct MyReservationsView: View {
         do {
             remote = try await model.customerSession.reservations().compactMap { $0.asSavedReservation() }
             remoteError = nil
+            // Cihazdaki kopyalar da güncel durumu (iptal, yönetim bağlantısı) taşısın.
+            remote.forEach(model.reservations.refresh(with:))
         } catch {
             remoteError = AuthValidation.message(for: error)
         }
@@ -164,12 +167,14 @@ struct ReservationRow: View {
                 Text("\(reservation.timeText) · \(Format.guests(reservation.guestCount))")
                     .font(.footnote)
                     .foregroundStyle(Color(.secondaryLabel))
-                if reservation.isPending {
+                if reservation.isCancelled {
+                    MPPill(text: "İptal edildi", tone: .critical)
+                } else if reservation.isPending {
                     MPPill(text: "Onay bekliyor", tone: .attention)
                 }
             }
             Spacer(minLength: 0)
-            if reservation.isUpcoming, reservation.remoteUUID != nil {
+            if reservation.isUpcoming, !reservation.isCancelled, reservation.remoteUUID != nil {
                 Image(systemName: "qrcode")
                     .font(.title3)
                     .foregroundStyle(Color(.secondaryLabel))

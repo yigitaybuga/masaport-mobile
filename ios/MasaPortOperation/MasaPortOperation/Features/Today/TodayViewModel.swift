@@ -15,24 +15,40 @@ final class TodayViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var offeringEntryID: Int?
     @Published private(set) var offerErrorMessage: String?
+    /// Son başarılı yüklemenin mekanı; hata bildirimi varken eski veri yalnızca aynı mekan içinse gösterilir.
+    @Published private(set) var loadedVenueID: Int?
 
     private let api: APIClient
+    private var loadGate = LoadGate()
 
     init(api: APIClient = .shared) {
         self.api = api
     }
 
-    func load(venue: Venue) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
+    /// `silent`: ekranda veri varken yapılan arka plan tazelemesi (ön plana dönüş, düzenli yenileme).
+    func load(venue: Venue, silent: Bool = false) async {
+        guard let generation = loadGate.begin(silent: silent) else { return }
+        if !silent {
+            isLoading = true
+            errorMessage = nil
+        }
+        defer {
+            if loadGate.isCurrent(generation) { isLoading = false }
+            loadGate.end(generation)
+        }
 
         let today = Self.todayString()
         do {
             async let reservations: [Reservation] = api.get("/reservations/\(venue.id)?date=\(today)&per_page=250&sort_by=startTime&sort_order=asc")
             async let tables: [VenueTable] = api.get("/tables/\(venue.id)")
             async let waitlist: [WaitlistEntry] = api.get("/waitlist/\(venue.id)?status=WAITING,OFFERED")
-            (self.reservations, self.tables, self.waitlist) = try await (reservations, tables, waitlist)
+            let loaded = try await (reservations, tables, waitlist)
+            // Bu arada daha yeni bir yükleme başladıysa eski yanıt onun üzerine yazılmaz.
+            guard loadGate.isCurrent(generation) else { return }
+            (self.reservations, self.tables, self.waitlist) = loaded
+            loadedVenueID = venue.id
+            errorMessage = nil
+            // Her başarılı yenileme widget özetini yeniden yazar ve WidgetKit zaman çizelgesini tazeler.
             OperationWidgetSync.update(
                 venue: venue,
                 reservations: self.reservations,
@@ -40,9 +56,10 @@ final class TodayViewModel: ObservableObject {
                 waitlist: self.waitlist
             )
         } catch let error as APIError {
+            guard loadGate.isCurrent(generation) else { return }
             errorMessage = error.message
         } catch {
-            guard !error.isCancellation else { return }
+            guard loadGate.isCurrent(generation), !error.isCancellation else { return }
             errorMessage = "Bugünün verileri yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -73,9 +90,11 @@ final class TodayViewModel: ObservableObject {
         offeringEntryID = entry.id
         offerErrorMessage = nil
         defer { offeringEntryID = nil }
-        struct StatusRequest: Encodable { let status: String }
         do {
-            let _: WaitlistOfferResult = try await api.put("/waitlist/entry/\(entry.id)/status", body: StatusRequest(status: "CONVERTED"))
+            let _: WaitlistOfferResult = try await api.put(
+                "/waitlist/entry/\(entry.id)/status",
+                body: WaitlistStatusUpdateRequest(status: "CONVERTED", venueID: venue.id)
+            )
             await load(venue: venue)
             return true
         } catch let error as APIError {

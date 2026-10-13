@@ -143,10 +143,12 @@ struct EventDetailView: View {
 
     @ViewBuilder
     private func priceLabel(_ event: EventDetail) -> some View {
-        if let price = Format.price(event.price) {
-            Text("\(price) / kişi").font(.subheadline.weight(.bold)).monospacedDigit()
-        } else if event.ticketUrl == nil {
+        if event.ticketUrl == nil, event.isFree {
             Text("Ücretsiz").font(.subheadline.weight(.bold)).foregroundStyle(MP.positive)
+        } else if let price = Format.price(event.lowestPaidPrice) {
+            // Bilet seçenekli etkinlikte birden çok fiyat veya ücretsiz bilet olabilir.
+            let ranged = event.requiresTicketOption && (event.hasMultiplePaidPrices || event.offersFreeTicket)
+            Text(ranged ? "\(price) ve üzeri" : "\(price) / kişi").font(.subheadline.weight(.bold)).monospacedDigit()
         }
     }
 
@@ -166,7 +168,7 @@ struct EventDetailView: View {
                 MPNotice(message: "Yaklaşan seans bulunmuyor.", tone: .neutral)
             }
             ForEach(shown) { instance in
-                SessionRow(instance: instance, isExternal: event.ticketUrl != nil) {
+                SessionRow(instance: instance, isExternal: event.ticketUrl != nil, isSoldOut: event.isSoldOut(instance)) {
                     handleCTA(event, instance: instance)
                 }
             }
@@ -208,20 +210,20 @@ struct EventDetailView: View {
     private func bottomBar(_ event: EventDetail) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                if let price = Format.price(event.price) {
-                    Text(price).font(.headline).monospacedDigit()
-                    Text("kişi başı").font(.caption).foregroundStyle(Color(.secondaryLabel))
-                } else if event.ticketUrl == nil {
+                if event.ticketUrl != nil {
+                    Text(Format.price(event.price) ?? "Biletler").font(.headline).monospacedDigit()
+                    Text("Bilet sitesinde").font(.caption).foregroundStyle(Color(.secondaryLabel))
+                } else if event.isFree {
                     Text("Ücretsiz").font(.headline).foregroundStyle(MP.positive)
                     Text("Kayıt gerekli").font(.caption).foregroundStyle(Color(.secondaryLabel))
-                } else {
-                    Text("Biletler").font(.headline)
-                    Text("Bilet sitesinde").font(.caption).foregroundStyle(Color(.secondaryLabel))
+                } else if let price = Format.price(event.lowestPaidPrice) {
+                    Text(price).font(.headline).monospacedDigit()
+                    Text(priceCaption(event)).font(.caption).foregroundStyle(Color(.secondaryLabel))
                 }
             }
             Spacer()
             Button {
-                handleCTA(event, instance: event.upcomingInstances.first { !$0.isSoldOut })
+                handleCTA(event, instance: event.upcomingInstances.first { !event.isSoldOut($0) })
             } label: {
                 Label(ctaTitle(event), systemImage: event.ticketUrl != nil ? "arrow.up.right.square" : "ticket")
                     .font(.headline)
@@ -229,7 +231,7 @@ struct EventDetailView: View {
             }
             .buttonStyle(.glassProminent).tint(MP.action)
             .controlSize(.large)
-            .disabled(event.ticketUrl == nil && event.upcomingInstances.allSatisfy(\.isSoldOut))
+            .disabled(event.ticketUrl == nil && !canBook(event))
         }
         .padding(.leading, 20)
         .padding(.trailing, 8)
@@ -239,10 +241,22 @@ struct EventDetailView: View {
         .padding(.vertical, 6)
     }
 
+    private func priceCaption(_ event: EventDetail) -> String {
+        guard event.requiresTicketOption else { return "kişi başı" }
+        if event.offersFreeTicket { return "ücretsiz bilet de var" }
+        return event.hasMultiplePaidPrices ? "en düşük fiyat" : "kişi başı"
+    }
+
+    private func canBook(_ event: EventDetail) -> Bool {
+        if event.requiresTicketOption, event.saleableTicketOptions.isEmpty { return false }
+        return event.upcomingInstances.contains { !event.isSoldOut($0) }
+    }
+
     private func ctaTitle(_ event: EventDetail) -> String {
         if event.ticketUrl != nil { return "Bilet al" }
         if event.upcomingInstances.isEmpty { return "Seans yok" }
-        if event.upcomingInstances.allSatisfy(\.isSoldOut) { return "Tükendi" }
+        if event.requiresTicketOption, event.saleableTicketOptions.isEmpty { return "Satış kapalı" }
+        if !canBook(event) { return "Tükendi" }
         return event.isFree ? "Yer ayırt" : "Bilet al"
     }
 
@@ -252,11 +266,12 @@ struct EventDetailView: View {
             externalTicket = SafariDestination(url: ticket)
             return
         }
-        guard let instance else { return }
-        if event.isFree || model.canPayInApp {
+        guard let instance, !event.isSoldOut(instance) else { return }
+        // Ücretsiz bir bilet varsa seçim uygulamada yapılır; ücretli bilet seçilirse kayıt ekranı web'e devreder.
+        if event.offersFreeTicket || model.canPayInApp {
             registration = EventRegistrationTarget(event: event, instance: instance)
         } else {
-            // Kart bilgisi isteyen ödeme akışı web'de tamamlanır.
+            // Kart bilgisi isteyen ödeme akışı (bilet seçimi dahil) web'de tamamlanır.
             safari = SafariDestination(url: AppConfiguration.webEventTicketURL(eventID: event.id))
         }
     }
@@ -271,7 +286,11 @@ struct EventRegistrationTarget: Identifiable {
 struct SessionRow: View {
     let instance: EventInstance
     var isExternal = false
+    /// Seans kapasitesi veya satıştaki tüm biletler tükendiyse.
+    var isSoldOut: Bool? = nil
     let action: () -> Void
+
+    private var soldOut: Bool { isSoldOut ?? instance.isSoldOut }
 
     var body: some View {
         HStack(spacing: 14) {
@@ -291,7 +310,9 @@ struct SessionRow: View {
                 Text(instance.startDate.map { DateFormat.time.string(from: $0) } ?? "Saat açıklanacak")
                     .font(.headline)
                     .monospacedDigit()
-                if let badge = instance.availabilityBadge {
+                if soldOut, !isExternal, !instance.isSoldOut {
+                    MPPill(text: "Biletler tükendi", tone: .critical)
+                } else if let badge = instance.availabilityBadge {
                     MPPill(text: badge.text, tone: badge.tone)
                 } else {
                     Text("Kontenjan sınırsız").font(.caption).foregroundStyle(Color(.secondaryLabel))
@@ -299,11 +320,11 @@ struct SessionRow: View {
             }
             Spacer()
             Button(action: action) {
-                Text(isExternal ? "Bilet" : (instance.isSoldOut ? "Dolu" : "Seç"))
+                Text(isExternal ? "Bilet" : (soldOut ? "Dolu" : "Seç"))
                     .font(.subheadline.weight(.semibold))
             }
             .buttonStyle(.glass)
-            .disabled(!isExternal && instance.isSoldOut)
+            .disabled(!isExternal && soldOut)
         }
         .padding(14)
         .background(MP.card, in: RoundedRectangle(cornerRadius: MP.radius, style: .continuous))

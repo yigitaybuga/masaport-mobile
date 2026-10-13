@@ -111,16 +111,24 @@ struct WaitlistView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .refreshable { await model.load(venueID: venueID) }
-        .task(id: "\(venueID)-\(session.accessToken ?? "")") {
-            await model.load(venueID: venueID)
+        .operationAutoRefresh(id: venueID) { trigger in
+            // Arka planda soket sessizce ölmüş olabilir; ön plana dönüşte taze bağlantı kurulur.
+            if trigger == .foreground {
+                liveUpdates.connect(venueID: venueID)
+            }
+            await model.load(venueID: venueID, silent: trigger.isSilent)
+        }
+        .task(id: venueID) {
             liveUpdates.onChange = { event in
                 guard event.venueID == venueID,
                       event.resources?.contains("waitlist") != false else { return }
                 Task { await model.load(venueID: venueID) }
             }
-            if let accessToken = session.accessToken {
-                liveUpdates.connect(venueID: venueID, accessToken: accessToken)
+            // Bağlantı koptuğu sürede kaçan değişiklikler için yeniden bağlanınca liste tazelenir.
+            liveUpdates.onResync = {
+                Task { await model.load(venueID: venueID) }
             }
+            liveUpdates.connect(venueID: venueID)
         }
         .onDisappear { liveUpdates.disconnect() }
     }

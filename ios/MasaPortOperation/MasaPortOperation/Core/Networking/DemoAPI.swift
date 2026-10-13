@@ -348,6 +348,7 @@ final class DemoStore {
         if reservation.status.uppercased() != "CONFIRMED" {
             return fail(400, "Sadece onaylanmış rezervasyonlar check-in yapılabilir")
         }
+        if let conflict = versionConflict(body, current: reservation) { return conflict }
         let force = (try? decoder.decode(RestaurantCheckinRequest.self, from: body))?.forceCheckIn ?? false
         let minutes = reservation.minutesUntilStart() ?? 0
         if minutes > 15 && !force {
@@ -455,6 +456,7 @@ final class DemoStore {
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz masa ataması.")
         }
+        if let conflict = versionConflict(body, current: reservations[index]) { return conflict }
         let updates = tables
             .filter { request.tableIDs.contains($0.id) }
             .map { ReservationTableUpdate(id: $0.id, name: $0.name, capacity: $0.capacity) }
@@ -493,6 +495,7 @@ final class DemoStore {
         if service == "LEFT" && !current.checkedIn {
             return fail(409, "Yalnızca check-in yapılmış rezervasyon kalktı olarak işaretlenebilir.")
         }
+        if let conflict = versionConflict(body, current: current) { return conflict }
         let update = ReservationServiceStatusUpdate(
             serviceStatus: service,
             status: ["LEFT", "CLEANING", "EMPTY"].contains(service) ? "COMPLETED" : "CONFIRMED",
@@ -629,6 +632,7 @@ final class DemoStore {
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz durum isteği.")
         }
+        if let conflict = versionConflict(body, current: reservations[index]) { return conflict }
         reservations[index] = reservations[index].updating(status: request.status.uppercased(), updatedAt: Self.nowString())
         syncTableStates()
         return ok(EmptyResponse())
@@ -647,6 +651,7 @@ final class DemoStore {
         if reservation.checkedIn || reservation.isTerminal {
             return fail(409, "Only an unseated pending or confirmed reservation can be marked as no-show")
         }
+        if let conflict = versionConflict(body, current: reservation) { return conflict }
         reservations[index] = reservation.updating(status: "NO_SHOW", updatedAt: Self.nowString())
         return ok(EmptyResponse())
     }
@@ -662,10 +667,21 @@ final class DemoStore {
     }
 
     private func updateWaitlistStatus(entryID: Int, body: Data) -> (Int, Data) {
-        struct Request: Decodable { let status: String }
+        struct Request: Decodable {
+            let status: String
+            let venueID: Int?
+            enum CodingKeys: String, CodingKey {
+                case status
+                case venueID = "venue_id"
+            }
+        }
         guard let index = waitlist.firstIndex(where: { $0.id == entryID }),
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz bekleme durumu.")
+        }
+        // Yayındaki API'nin `authorize()` ara katmanı mekanı bu rotada yalnızca gövdeden okur.
+        guard request.venueID != nil else {
+            return fail(403, "Yetkisiz erişim")
         }
         if ["WAITING", "OFFERED"].contains(request.status.uppercased()) {
             waitlist[index] = waitlist[index].updating(status: request.status.uppercased(), offerExpiresAt: nil)
@@ -675,6 +691,36 @@ final class DemoStore {
         return ok(WaitlistStatusPayload(id: entryID, status: request.status))
     }
 
+    // MARK: Optimistic concurrency
+
+    /// API'deki `assertExpectedUpdatedAt` gibi: istek bir sürüm gönderdiyse kayıtla birebir eşleşmelidir.
+    private func versionConflict(_ body: Data, current: Reservation) -> (Int, Data)? {
+        struct Versioned: Decodable {
+            let expectedUpdatedAt: String?
+            enum CodingKeys: String, CodingKey { case expectedUpdatedAt = "expected_updated_at" }
+        }
+        guard let expected = (try? decoder.decode(Versioned.self, from: body))?.expectedUpdatedAt,
+              !expected.isEmpty else {
+            return nil
+        }
+        guard !Self.isSameInstant(expected, current.updatedAt) else { return nil }
+        return fail(
+            409,
+            "Kayıt başka bir kullanıcı tarafından güncellendi",
+            message: "Bu kayıt başka bir ekranda değişti. Güncel veriyi yenileyip tekrar deneyin.",
+            code: "CONFLICT"
+        )
+    }
+
+    private static func isSameInstant(_ lhs: String, _ rhs: String) -> Bool {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+        func parse(_ value: String) -> Date? { fractional.date(from: value) ?? plain.date(from: value) }
+        guard let left = parse(lhs), let right = parse(rhs) else { return lhs == rhs }
+        return left == right
+    }
+
     // MARK: Encoding
 
     private struct Envelope<Value: Encodable>: Encodable {
@@ -682,14 +728,15 @@ final class DemoStore {
         let data: Value?
         let error: String?
         var message: String? = nil
+        var code: String? = nil
     }
 
     private func ok<Value: Encodable>(_ value: Value) -> (Int, Data) {
         (200, (try? encoder.encode(Envelope(success: true, data: value, error: nil))) ?? Data())
     }
 
-    private func fail(_ status: Int, _ error: String, message: String? = nil) -> (Int, Data) {
-        (status, (try? encoder.encode(Envelope<EmptyResponse>(success: false, data: nil, error: error, message: message))) ?? Data())
+    private func fail(_ status: Int, _ error: String, message: String? = nil, code: String? = nil) -> (Int, Data) {
+        (status, (try? encoder.encode(Envelope<EmptyResponse>(success: false, data: nil, error: error, message: message, code: code))) ?? Data())
     }
 
     static func isoString(_ date: Date) -> String {

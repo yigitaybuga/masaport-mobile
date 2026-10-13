@@ -14,6 +14,8 @@ struct APIError: LocalizedError, Equatable {
     let message: String
     let code: String?
     var detail: String? = nil
+    /// Rezervasyon uçları kart bilgisi gerektiğinde hatayla birlikte `requiresPayment: true` döner.
+    var requiresPayment: Bool? = nil
 
     var errorDescription: String? { message }
     var isNotFound: Bool { statusCode == 404 }
@@ -55,13 +57,17 @@ protocol AccessTokenProviding: AnyObject {
     func refreshAccessToken() async -> String?
 }
 
-enum APIAuthMode {
+enum APIAuthMode: Equatable {
     /// Anonim istek.
     case none
     /// Oturum varsa Bearer eklenir, yoksa anonim devam eder (public rezervasyon uçları).
     case optional
     /// Oturum zorunlu; token yoksa istek gönderilmeden hata döner.
     case required
+    /// Tüketici oturumundan bağımsız, bağlantıyla gelen token (misafir rezervasyon yönetimi). Yenilenmez.
+    case bearer(String)
+
+    var usesCustomerSession: Bool { self == .optional || self == .required }
 }
 
 final class APIClient {
@@ -136,7 +142,9 @@ final class APIClient {
         }
 
         var token: String?
-        if auth != .none {
+        if case .bearer(let explicit) = auth {
+            token = explicit
+        } else if auth.usesCustomerSession {
             token = await tokenProvider?.currentAccessToken()
             if token == nil, auth == .required {
                 throw APIError(statusCode: 401, message: "Giriş yapman gerekiyor.", code: "CUSTOMER_AUTH_REQUIRED")
@@ -150,7 +158,7 @@ final class APIClient {
             var (data, response) = try await session.data(for: request)
             var status = (response as? HTTPURLResponse)?.statusCode ?? 0
             // Erişim token'ı süresi dolmuşsa bir kez yenileyip tekrar dene.
-            if status == 401, token != nil, let renewed = await tokenProvider?.refreshAccessToken() {
+            if status == 401, token != nil, auth.usesCustomerSession, let renewed = await tokenProvider?.refreshAccessToken() {
                 request.setValue("Bearer \(renewed)", forHTTPHeaderField: "Authorization")
                 (data, response) = try await session.data(for: request)
                 status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -176,9 +184,12 @@ final class APIClient {
 
     private static func error(from data: Data, status: Int, decoder: JSONDecoder, envelopeMessage: String? = nil, code: String? = nil, detail: String? = nil) -> APIError {
         struct Loose: Decodable { let error: String?; let message: String?; let code: String? }
+        // Ayrı çözülür: beklenmedik tipte bir bayrak hata mesajının kaybolmasına yol açmasın.
+        struct PaymentFlag: Decodable { let requiresPayment: Bool? }
         let loose = try? decoder.decode(Loose.self, from: data)
+        let paymentFlag = try? decoder.decode(PaymentFlag.self, from: data)
         let message = envelopeMessage ?? loose?.error ?? loose?.message ?? Self.fallbackMessage(for: status)
-        return APIError(statusCode: status, message: message, code: code ?? loose?.code, detail: detail ?? loose?.message)
+        return APIError(statusCode: status, message: message, code: code ?? loose?.code, detail: detail ?? loose?.message, requiresPayment: paymentFlag?.requiresPayment)
     }
 
     private static func fallbackMessage(for status: Int) -> String {

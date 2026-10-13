@@ -40,7 +40,6 @@ private struct ReservationFlowContent: View {
     @Bindable var viewModel: ReservationViewModel
     @State private var safari: SafariDestination?
     @State private var pendingPaymentId: String?
-    @State private var paymentMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -64,7 +63,7 @@ private struct ReservationFlowContent: View {
                 }
             }
         }
-        .interactiveDismissDisabled(viewModel.isSubmitting)
+        .interactiveDismissDisabled(viewModel.isSubmitting || viewModel.isCheckingPayment)
         .task { await viewModel.loadAvailability() }
         .onChange(of: viewModel.outcome) { _, outcome in
             guard let outcome else { return }
@@ -144,19 +143,30 @@ private struct ReservationFlowContent: View {
         }
     }
 
+    /// `slot`, seçili tarihte geçerli kural uygulanmış slottur (etkinlik gecesi, özel kural, provizyon).
     @ViewBuilder
     private func slotNotes(_ slot: PublicSlot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             if slot.isRequestOnly {
                 MPNotice(message: slot.bookingMessage?.nilIfBlank ?? "Bu saat için rezervasyon mekan onayından sonra kesinleşir.", tone: .attention)
-            }
-            if slot.prepaymentRequired == true {
-                MPNotice(message: slot.prepaymentSummary?.nilIfBlank ?? "Bu saat için ön ödeme alınır. Ödeme güvenli web sayfasında tamamlanır.", tone: .brand)
+            } else if slot.requiresPrepayment {
+                MPNotice(message: prepaymentNotice(slot), tone: .brand)
             }
             if slot.minimumSpendRequired == true, let summary = slot.minimumSpendSummary?.nilIfBlank {
                 MPNotice(message: summary, tone: .neutral)
             }
         }
+    }
+
+    private func prepaymentNotice(_ slot: PublicSlot) -> String {
+        let title = slot.prepaymentTitle.lowercased(with: Locale(identifier: "tr_TR"))
+        var headline = "Bu saat için \(title) alınır"
+        if let summary = slot.prepaymentSummary?.nilIfBlank {
+            // Sunucu özeti provizyonu zaten belirtir ("Kişi başı 500 TL kart provizyonu"); ön ödemede başlık eklenir.
+            let trimmed = summary.hasSuffix(".") ? String(summary.dropLast()) : summary
+            headline = trimmed.lowercased(with: Locale(identifier: "tr_TR")).contains(title) ? trimmed : "\(slot.prepaymentTitle): \(trimmed)"
+        }
+        return "\(headline). \(slot.prepaymentExplanation)"
     }
 
     // MARK: Adım 2 – Bilgiler
@@ -165,6 +175,14 @@ private struct ReservationFlowContent: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 summaryCard
+                if viewModel.isCheckingPayment {
+                    MPLoadingRow(title: "Ödeme durumu kontrol ediliyor")
+                } else if let notice = viewModel.paymentNotice {
+                    MPNotice(message: notice, tone: .attention)
+                }
+                if viewModel.requiresPrepayment, let slot = viewModel.selectedSlot?.slot {
+                    prepaymentCard(slot)
+                }
                 VStack(spacing: 14) {
                     MPLabeledField(label: "Ad Soyad") {
                         TextField("Adın ve soyadın", text: $viewModel.name)
@@ -183,12 +201,8 @@ private struct ReservationFlowContent: View {
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                     }
-                    MPLabeledField(label: "Not (isteğe bağlı)") {
-                        TextField("Pencere kenarı, doğum günü, alerji…", text: $viewModel.note, axis: .vertical)
-                            .lineLimit(2...4)
-                            .padding(.vertical, 10)
-                    }
                 }
+                guestRequestsSection
                 VStack(alignment: .leading, spacing: 10) {
                     Toggle(isOn: $viewModel.rememberMe) {
                         Text("Bilgilerimi bu cihazda hatırla").font(.subheadline)
@@ -231,11 +245,7 @@ private struct ReservationFlowContent: View {
             } label: {
                 HStack {
                     if viewModel.isSubmitting { ProgressView().tint(MP.onBrand) }
-                    Text(
-                        viewModel.isSubmitting
-                            ? "Hazırlanıyor"
-                            : viewModel.requiresWebHandoff ? "Ödemeye geç" : "Rezervasyonu tamamla"
-                    )
+                    Text(submitTitle)
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
@@ -248,12 +258,103 @@ private struct ReservationFlowContent: View {
         }
     }
 
+    private var submitTitle: String {
+        if viewModel.isSubmitting { return "Hazırlanıyor" }
+        if viewModel.isCheckingPayment { return "Kontrol ediliyor" }
+        guard viewModel.requiresPrepayment else { return "Rezervasyonu tamamla" }
+        return viewModel.selectedSlot?.slot.isPreauth == true ? "Kart provizyonuna geç" : "Ödemeye geç"
+    }
+
+    /// Özel gün, diyet/alerji, oturma tercihi ve not. Restoran bunları bu rezervasyonla görür.
+    private var guestRequestsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Özel gün ve istekler").font(.subheadline.weight(.semibold))
+                Text("İsteğe bağlı · restoran rezervasyonunla birlikte görür.")
+                    .font(.caption)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Özel bir gün mü?").font(.caption.weight(.semibold))
+                FlowLayout(spacing: 8) {
+                    ForEach(ReservationOccasion.allCases) { option in
+                        MPChip(title: option.label, systemImage: option.systemImage, isSelected: viewModel.occasion == option) {
+                            viewModel.toggleOccasion(option)
+                        }
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Diyet ve alerji").font(.caption.weight(.semibold))
+                FlowLayout(spacing: 8) {
+                    ForEach(CustomerPreferences.dietaryOptions) { option in
+                        MPChip(title: option.label, isSelected: viewModel.dietary.contains(option.key)) {
+                            viewModel.toggleDietary(option.key)
+                        }
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Oturma tercihi").font(.caption.weight(.semibold))
+                FlowLayout(spacing: 8) {
+                    ForEach(CustomerPreferences.seatingOptions) { option in
+                        MPChip(title: option.label, isSelected: viewModel.seating.contains(option.key)) {
+                            viewModel.toggleSeating(option.key)
+                        }
+                    }
+                }
+                Text("Masa tercihi müsaitliğe göre değerlendirilir.")
+                    .font(.caption)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            MPLabeledField(label: "Restorana notun") {
+                TextField("Pastayı biz getireceğiz, bebek arabamız olacak…", text: $viewModel.note, axis: .vertical)
+                    .lineLimit(2...4)
+                    .padding(.vertical, 10)
+                    .onChange(of: viewModel.note) { _, value in
+                        if value.count > 500 { viewModel.note = String(value.prefix(500)) }
+                    }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(MP.card, in: RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
+    }
+
+    /// Ön ödeme veya kart provizyonu tutarı ve ne anlama geldiği; web'deki ödeme adımıyla aynı dil.
+    private func prepaymentCard(_ slot: PublicSlot) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Label(slot.prepaymentTitle, systemImage: slot.isPreauth ? "creditcard.and.123" : "creditcard")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if let total = Format.price(slot.prepaymentTotal) {
+                    Text(total)
+                        .font(.headline)
+                        .monospacedDigit()
+                }
+            }
+            if let summary = slot.prepaymentSummary?.nilIfBlank {
+                Text(summary)
+                    .font(.footnote)
+                    .foregroundStyle(Color(.secondaryLabel))
+            }
+            Text(slot.prepaymentExplanation)
+                .font(.footnote)
+                .foregroundStyle(Color(.secondaryLabel))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .background(MP.card, in: RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
     // MARK: Adım 3 – Onay
 
     @ViewBuilder
     private var doneStep: some View {
         if case let .confirmed(saved, message) = viewModel.outcome {
-            ReservationConfirmationView(reservation: saved, message: message ?? paymentMessage) { dismiss() }
+            ReservationConfirmationView(reservation: saved, message: message) { dismiss() }
         } else {
             ProgressView()
         }
@@ -291,24 +392,15 @@ private struct ReservationFlowContent: View {
     }
 
     private func handleSafariDismiss() {
-        guard let paymentId = pendingPaymentId, let slot = viewModel.selectedSlot else {
-            // Web'e devredilen akış: kullanıcı web'de tamamladıysa kayıt e-postayla gelir.
-            if case .handedOffToWeb = viewModel.outcome { dismiss() }
-            return
-        }
-        pendingPaymentId = nil
-        Task {
-            let status = await viewModel.pollPayment(paymentId: paymentId)
-            if let status, status.isSuccess {
-                var saved = viewModel.makeSavedReservation(slot: slot, created: nil)
-                saved.status = "CONFIRMED"
-                saved.remoteUUID = status.reservationUuid
-                model.reservations.add(saved)
-                paymentMessage = "Ödemen alındı."
-                viewModel.step = .done
-            } else {
-                paymentMessage = nil
-            }
+        if let paymentId = pendingPaymentId {
+            pendingPaymentId = nil
+            Task { await viewModel.resolveHostedCheckout(paymentId: paymentId) }
+        } else if viewModel.pendingHold != nil {
+            // Hesaba bağlı bekletme: ödeme tamamlandıysa onay gösterilir, değilse masa serbest bırakılır.
+            Task { await viewModel.resolveWebPayment() }
+        } else if case .handedOffToWeb = viewModel.outcome {
+            // Hesapsız web akışı: kullanıcı web'de tamamladıysa kayıt e-postayla gelir.
+            dismiss()
         }
     }
 }

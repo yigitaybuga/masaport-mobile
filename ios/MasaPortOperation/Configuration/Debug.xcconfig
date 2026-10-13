@@ -1,3 +1,11 @@
-// Xcode-installed Debug builds use the live API.
-MASAPORT_API_BASE_URL = https:/$()/api.masaport.com/api
+// Debug derlemeleri yerel API'ye bağlanır; canlı veriye yazmaz.
+// Simülatör Mac'in loopback'ini paylaşır. Fiziksel cihaz Mac'e aynı Wi-Fi üzerinden,
+// DHCP ile değişmeyen Bonjour adıyla (.local) ulaşır; API tüm arayüzlerde dinlemelidir.
+// Başka bir Mac veya sabit IP için Configuration/Debug.local.xcconfig (git'e girmez)
+// içinde örn. `MASAPORT_DEV_HOST[sdk=iphoneos*] = 192.168.1.20` yazın.
+MASAPORT_DEV_HOST = 127.0.0.1
+MASAPORT_DEV_HOST[sdk=iphoneos*] = Yigit-MacBook-Pro-2.local
+#include? "Debug.local.xcconfig"
+
+MASAPORT_API_BASE_URL = http:/$()/$(MASAPORT_DEV_HOST):3000/api
 PRODUCT_BUNDLE_IDENTIFIER = com.masaport.operation.debug

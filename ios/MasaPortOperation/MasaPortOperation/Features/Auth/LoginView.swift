@@ -18,6 +18,10 @@ struct LoginView: View {
                     hero(topInset: proxy.safeAreaInsets.top)
 
                     VStack(spacing: 14) {
+                        if let notice = session.signOutNotice {
+                            MPNotice(message: notice, tone: .attention)
+                        }
+
                         formCard
 
                         if let errorMessage {

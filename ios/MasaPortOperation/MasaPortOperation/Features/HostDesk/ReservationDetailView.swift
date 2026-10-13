@@ -21,7 +21,7 @@ private struct ServiceStatusRequest: Encodable {
 }
 
 @MainActor
-private final class ReservationDetailViewModel: ObservableObject {
+final class ReservationDetailViewModel: ObservableObject {
     @Published private(set) var reservation: Reservation
     @Published private(set) var tableOptions: [AssignableTable] = []
     @Published var selectedTableIDs: Set<Int> = []
@@ -31,12 +31,36 @@ private final class ReservationDetailViewModel: ObservableObject {
 
     private let venueID: Int
     private let api: APIClient
+    /// Sunucu `expected_updated_at` için birebir eşleşme ister. Bir işlemden sonra güncel kayıt
+    /// alınamadıysa sürüm uydurulmaz; bir sonraki işlemden önce kayıt sunucudan yeniden çekilir.
+    private var needsServerRefresh = false
 
     init(reservation: Reservation, venueID: Int, api: APIClient = .shared) {
         self.reservation = reservation
         self.venueID = venueID
         self.api = api
         selectedTableIDs = Set(reservation.tables.map(\.id))
+    }
+
+    /// Kaydı (ve güncel `updatedAt` değerini) sunucudan çeker; başarısızsa bir sonraki işlem öncesine bırakır.
+    @discardableResult
+    private func reloadFromServer() async -> Bool {
+        do {
+            reservation = try await api.get("/reservations/\(venueID)/\(reservation.id)")
+            needsServerRefresh = false
+            return true
+        } catch {
+            needsServerRefresh = true
+            return false
+        }
+    }
+
+    /// Önceki işlemin sürümü alınamadıysa eski sürümle kesin 409 almak yerine önce kaydı tazeler.
+    private func ensureCurrentVersion() async -> Bool {
+        guard needsServerRefresh else { return true }
+        if await reloadFromServer() { return true }
+        errorMessage = "Rezervasyonun güncel hali alınamadı. Bağlantınızı kontrol edip tekrar deneyin."
+        return false
     }
 
     func loadTableOptions() async {
@@ -66,6 +90,7 @@ private final class ReservationDetailViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
+        guard await ensureCurrentVersion() else { return false }
 
         do {
             let result: ReservationTableAssignment = try await api.put(
@@ -94,6 +119,8 @@ private final class ReservationDetailViewModel: ObservableObject {
         errorMessage = nil
         defer { isSaving = false }
 
+        guard await ensureCurrentVersion() else { return false }
+
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let nameChanged = customerName != reservation.customerName
         let phoneChanged = customerPhone != reservation.customerPhone
@@ -110,9 +137,8 @@ private final class ReservationDetailViewModel: ObservableObject {
                 )
             )
             // Sunucu güncel `updatedAt` döndürmez; çakışma kontrolü için kaydı yeniden çek.
-            if let fresh: Reservation = try? await api.get("/reservations/\(venueID)/\(reservation.id)") {
-                reservation = fresh
-            } else {
+            if !(await reloadFromServer()) {
+                // Ekranda yeni bilgiler görünsün; sürüm eskide kalır ve bir sonraki işlemden önce tazelenir.
                 let duration = OperationDate.minutesBetween(reservation.startTime, reservation.endTime) ?? 90
                 reservation = reservation.updating(
                     customerName: customerName, customerPhone: customerPhone, guestCount: guestCount,
@@ -141,12 +167,17 @@ private final class ReservationDetailViewModel: ObservableObject {
         errorMessage = nil
         defer { isSaving = false }
 
+        guard await ensureCurrentVersion() else { return false }
+
         do {
             let _: EmptyResponse = try await api.put(
                 "/reservations/\(venueID)/\(reservation.id)/status",
                 body: ReservationStatusRequest(status: status, expectedUpdatedAt: reservation.updatedAt)
             )
-            reservation = reservation.updating(status: status, updatedAt: ISO8601DateFormatter().string(from: .now))
+            // Yanıt `updated_at` taşımaz; sunucu masa/servis durumunu da değiştirebilir. Kaydın tamamını yeniden çek.
+            if !(await reloadFromServer()) {
+                reservation = reservation.updating(status: status.uppercased(), updatedAt: reservation.updatedAt)
+            }
             return true
         } catch let error as APIError {
             errorMessage = error.isConflict
@@ -164,12 +195,18 @@ private final class ReservationDetailViewModel: ObservableObject {
         errorMessage = nil
         defer { isSaving = false }
 
+        guard await ensureCurrentVersion() else { return false }
+
         do {
             let _: EmptyResponse = try await api.post(
                 "/reservations/\(venueID)/\(reservation.id)/no-show",
                 body: ReservationNoShowRequest(reason: reason, expectedUpdatedAt: reservation.updatedAt)
             )
-            reservation = reservation.updating(status: "NO_SHOW", updatedAt: ISO8601DateFormatter().string(from: .now))
+            // Yanıttaki `updated_at`, servis durumu senkronundan önce okunduğu için son sürüm olmayabilir;
+            // kaydın tamamı yeniden çekilir.
+            if !(await reloadFromServer()) {
+                reservation = reservation.updating(status: "NO_SHOW", updatedAt: reservation.updatedAt)
+            }
             return true
         } catch let error as APIError {
             errorMessage = error.isConflict
@@ -186,6 +223,7 @@ private final class ReservationDetailViewModel: ObservableObject {
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
+        guard await ensureCurrentVersion() else { return false }
 
         do {
             let result: ReservationServiceStatusUpdate = try await api.put(

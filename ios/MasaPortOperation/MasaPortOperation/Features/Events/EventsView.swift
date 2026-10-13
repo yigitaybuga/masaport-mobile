@@ -71,7 +71,10 @@ struct EventsView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .refreshable { await model.load(venueID: venue.id) }
-        .task(id: venue.id) { await model.load(venueID: venue.id) }
+        // İlk yükleme, ön plana dönüşte ve ekran açıkken dakikada bir sessiz tazeleme.
+        .operationAutoRefresh(id: venue.id, every: .seconds(60)) { trigger in
+            await model.load(venueID: venue.id, silent: trigger.isSilent)
+        }
     }
 
     private var overview: some View {

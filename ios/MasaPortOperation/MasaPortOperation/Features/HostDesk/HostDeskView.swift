@@ -191,15 +191,25 @@ struct HostDeskView: View {
             }
         }
         .refreshable { await model.load(venueID: venue.id, date: selectedDate) }
-        .task(id: "\(venue.id)-\(session.accessToken ?? "")-\(OperationDate.apiString(selectedDate))") {
-            await model.load(venueID: venue.id, date: selectedDate)
+        .operationAutoRefresh(id: "\(venue.id)-\(OperationDate.apiString(selectedDate))") { trigger in
+            // Arka planda soket sessizce ölmüş olabilir; ön plana dönüşte taze bağlantı kurulur.
+            if trigger == .foreground {
+                liveUpdates.connect(venueID: venue.id)
+            }
+            await model.load(venueID: venue.id, date: selectedDate, silent: trigger.isSilent)
+        }
+        .task(id: "\(venue.id)-\(OperationDate.apiString(selectedDate))") {
             liveUpdates.onChange = { event in
                 guard event.venueID == venue.id else { return }
                 Task { await model.load(venueID: venue.id, date: selectedDate) }
             }
-            if let accessToken = session.accessToken {
-                liveUpdates.connect(venueID: venue.id, accessToken: accessToken)
+            // Bağlantı koptuğu sürede kaçan değişiklikler için yeniden bağlanınca liste tazelenir. Süren eski bir
+            // yükleme kopmadan önce başlamış olabileceği için bu yükleme atlanmaz; en yeni yanıt geçerli olur.
+            liveUpdates.onResync = {
+                Task { await model.load(venueID: venue.id, date: selectedDate) }
             }
+            // Token APIClient'tan okunur; süresi dolarsa canlı bağlantı yenileyip kendisi yeniden bağlanır.
+            liveUpdates.connect(venueID: venue.id)
         }
         .onDisappear { liveUpdates.disconnect() }
     }

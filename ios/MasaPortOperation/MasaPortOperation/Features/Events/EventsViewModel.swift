@@ -8,21 +8,33 @@ final class EventsViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
 
     private let api: APIClient
+    private var loadGate = LoadGate()
 
     init(api: APIClient = .shared) {
         self.api = api
     }
 
-    func load(venueID: Int) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
+    /// `silent`: ön plana dönüş ve düzenli yenileme; boş listede yükleniyor/boş durum arasında gidip gelmez.
+    func load(venueID: Int, silent: Bool = false) async {
+        guard let generation = loadGate.begin(silent: silent) else { return }
+        if !silent {
+            isLoading = true
+            errorMessage = nil
+        }
+        defer {
+            if loadGate.isCurrent(generation) { isLoading = false }
+            loadGate.end(generation)
+        }
         do {
-            events = try await api.get("/events/\(venueID)/events?per_page=100")
+            let loaded: [EventSummary] = try await api.get("/events/\(venueID)/events?per_page=100")
+            guard loadGate.isCurrent(generation) else { return }
+            events = loaded
+            errorMessage = nil
         } catch let error as APIError {
+            guard loadGate.isCurrent(generation) else { return }
             errorMessage = error.message
         } catch {
-            guard !error.isCancellation else { return }
+            guard loadGate.isCurrent(generation), !error.isCancellation else { return }
             errorMessage = "Etkinlikler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -50,21 +62,33 @@ final class EventDetailViewModel: ObservableObject {
     @Published private(set) var successCount = 0
 
     private let api: APIClient
+    private var loadGate = LoadGate()
 
     init(api: APIClient = .shared) {
         self.api = api
     }
 
-    func load(venueID: Int, eventID: Int) async {
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
+    /// `silent`: kapıda başka cihazlardan yapılan check-in'leri yansıtan arka plan tazelemesi.
+    func load(venueID: Int, eventID: Int, silent: Bool = false) async {
+        guard let generation = loadGate.begin(silent: silent) else { return }
+        if !silent {
+            isLoading = true
+            errorMessage = nil
+        }
+        defer {
+            if loadGate.isCurrent(generation) { isLoading = false }
+            loadGate.end(generation)
+        }
         do {
-            reservations = try await api.get("/events/\(venueID)/reservations/\(eventID)")
+            let loaded: [EventReservation] = try await api.get("/events/\(venueID)/reservations/\(eventID)")
+            guard loadGate.isCurrent(generation) else { return }
+            reservations = loaded
+            errorMessage = nil
         } catch let error as APIError {
+            guard loadGate.isCurrent(generation) else { return }
             errorMessage = error.message
         } catch {
-            guard !error.isCancellation else { return }
+            guard loadGate.isCurrent(generation), !error.isCancellation else { return }
             errorMessage = "Katılımcılar yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin."
         }
     }
@@ -105,8 +129,9 @@ final class EventDetailViewModel: ObservableObject {
             await load(venueID: venueID, eventID: eventID)
             return true
         } catch let error as APIError {
-            errorMessage = error.detail ?? error.message
+            // Yeniden yükleme hata bildirimini sıfırlar; mesaj yüklemeden sonra yazılır.
             await load(venueID: venueID, eventID: eventID)
+            errorMessage = error.detail ?? error.message
             return false
         } catch {
             errorMessage = "Check-in tamamlanamadı. Tekrar deneyin."

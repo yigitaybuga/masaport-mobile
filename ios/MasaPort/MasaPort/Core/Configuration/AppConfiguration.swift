@@ -34,7 +34,8 @@ enum AppConfiguration {
         webBaseURL.appending(path: "etkinlikler/\(eventID)")
     }
 
-    /// Ön ödeme gerektiren restoran rezervasyonları web akışına devredilir.
+    /// Ön ödeme gerektiren restoran rezervasyonları web akışına devredilir. `slot`, o tarihte geçerli
+    /// kural uygulanmış slot olmalıdır (`SlotOption.slot`); web aynı tutarı ve provizyon modunu gösterir.
     static func webReservationURL(
         venueID: Int,
         date: String,
@@ -44,6 +45,8 @@ enum AppConfiguration {
         customerPhone: String? = nil,
         customerEmail: String? = nil,
         note: String? = nil,
+        occasion: String? = nil,
+        guestPreferences: CustomerPreferences? = nil,
         paymentOnly: Bool = false,
         reservationHoldID: Int? = nil,
         reservationHoldUUID: String? = nil,
@@ -60,9 +63,14 @@ enum AppConfiguration {
             items.append(URLQueryItem(name: "start_time", value: slot.startTime.shortTime))
             items.append(URLQueryItem(name: "end_time", value: slot.endTime?.shortTime))
             items.append(URLQueryItem(name: "prepayment_required", value: String(slot.prepaymentRequired == true)))
+            items.append(URLQueryItem(name: "prepayment_mode", value: slot.prepaymentMode?.nilIfBlank))
+            items.append(URLQueryItem(name: "prepayment_amount", value: slot.prepaymentAmount?.value.map { String($0) }))
             items.append(URLQueryItem(name: "prepayment_total_amount", value: slot.prepaymentTotalAmount?.value.map { String($0) }))
             items.append(URLQueryItem(name: "prepayment_summary", value: slot.prepaymentSummary?.nilIfBlank))
+            // Web bu parametreyle kart provizyonu metinlerini gösterir (tutar çekilmez, bloke edilir).
+            items.append(URLQueryItem(name: "prepayment_capture_mode", value: slot.prepaymentCaptureMode?.nilIfBlank?.uppercased()))
             items.append(URLQueryItem(name: "minimum_spend_required", value: String(slot.minimumSpendRequired == true)))
+            items.append(URLQueryItem(name: "minimum_spend_amount", value: slot.minimumSpendAmount?.value.map { String($0) }))
             items.append(URLQueryItem(name: "minimum_spend_summary", value: slot.minimumSpendSummary?.nilIfBlank))
             items.append(URLQueryItem(name: "minimum_duration_minutes", value: slot.durationMinutes.map { String($0) }))
         }
@@ -79,13 +87,23 @@ enum AppConfiguration {
             URLQueryItem(name: "customer_email", value: customerEmail?.nilIfBlank),
             URLQueryItem(name: "customer_phone", value: customerPhone?.nilIfBlank),
             URLQueryItem(name: "reservation_note", value: note?.nilIfBlank),
+            URLQueryItem(name: "occasion", value: occasion?.nilIfBlank),
+            URLQueryItem(name: "dietary", value: guestPreferences?.dietary.joined(separator: ",").nilIfBlank),
+            URLQueryItem(name: "seating", value: guestPreferences?.seating.joined(separator: ",").nilIfBlank),
             URLQueryItem(name: "hold_id", value: reservationHoldID.map { String($0) }),
             URLQueryItem(name: "hold_uuid", value: reservationHoldUUID?.nilIfBlank),
             URLQueryItem(name: "hold_expires_at", value: holdExpiresAt?.nilIfBlank),
         ].filter { $0.value != nil }
-        components.percentEncodedFragment = privateComponents.percentEncodedQuery
+        // URLComponents "+" işaretini kodlamaz; web tarafı URLSearchParams ile "+"yı boşluk okur
+        // (+90… telefon, a+b@… e-posta bozulmasın diye).
+        components.percentEncodedFragment = privateComponents.percentEncodedQuery?
+            .replacingOccurrences(of: "+", with: "%2B")
 
         return components.url!
+    }
+
+    static func menuURL(slug: String) -> URL {
+        bookingBaseURL.appending(path: "menu/\(slug)")
     }
 
     static func webEventTicketURL(eventID: Int) -> URL {

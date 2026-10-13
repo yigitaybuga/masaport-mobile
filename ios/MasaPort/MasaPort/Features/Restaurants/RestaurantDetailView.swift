@@ -55,10 +55,13 @@ final class RestaurantDetailViewModel {
 
 struct RestaurantDetailView: View {
     let slug: String
+    /// Kısa rezervasyon bağlantısından (`/r/{slug}`) gelindiyse tarih/saat/kişi ön seçimi ve rezervasyon akışı.
+    var prefill: BookingPrefill? = nil
 
     @Environment(AppModel.self) private var model
     @State private var viewModel = RestaurantDetailViewModel()
     @State private var booking: BookingSelection?
+    @State private var didApplyPrefill = false
     @State private var safari: SafariDestination?
     @State private var galleryIndex = 0
     @State private var isGalleryPresented = false
@@ -95,7 +98,7 @@ struct RestaurantDetailView: View {
                 context: reservationContext(selection.detail),
                 initialDate: viewModel.selectedDate,
                 initialGuests: viewModel.guestCount,
-                initialTime: selection.slot?.slot.startTime,
+                initialTime: selection.slot?.slot.startTime ?? selection.time,
                 preloadedAvailability: viewModel.availability
             )
         }
@@ -108,7 +111,25 @@ struct RestaurantDetailView: View {
                 initialIndex: galleryIndex
             )
         }
-        .task { await viewModel.load(slug: slug) }
+        .task {
+            if let prefill, !didApplyPrefill {
+                if let date = prefill.date { viewModel.selectedDate = date }
+                if let guests = prefill.guests { viewModel.guestCount = guests }
+            }
+            await viewModel.load(slug: slug)
+            openPrefilledBooking()
+        }
+    }
+
+    /// Rezervasyon bağlantısı web'de doğrudan rezervasyon formunu açar; uygulamada da akış bir kez açılır.
+    private func openPrefilledBooking() {
+        guard let prefill, !didApplyPrefill, let detail = viewModel.detail else { return }
+        didApplyPrefill = true
+        guard detail.isReservationActive != false, detail.venue != nil else { return }
+        let slot = prefill.time.flatMap { time in
+            viewModel.slotOptions.first { $0.slot.startTime.shortTime == time && $0.isBookable }
+        }
+        booking = BookingSelection(detail: detail, slot: slot, time: prefill.time)
     }
 
     @ViewBuilder
@@ -126,6 +147,32 @@ struct RestaurantDetailView: View {
                     if let description = detail.description?.nilIfBlank {
                         section("Hakkında") {
                             ExpandableText(text: description)
+                        }
+                    }
+                    if let menu = detail.menu {
+                        section("Menü") {
+                            Link(destination: AppConfiguration.menuURL(slug: menu.slug)) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "menucard")
+                                        .font(.title3)
+                                        .foregroundStyle(MP.brand)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Menüyü gör").font(.subheadline.weight(.semibold))
+                                        if let total = menu.totalItems, total > 0 {
+                                            Text("\(total) ürün")
+                                                .font(.caption)
+                                                .foregroundStyle(Color(.secondaryLabel))
+                                        }
+                                    }
+                                    Spacer()
+                                    Image(systemName: "arrow.up.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(Color(.tertiaryLabel))
+                                }
+                                .padding(14)
+                                .background(MP.card, in: RoundedRectangle(cornerRadius: MP.radius, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     if let features = detail.features, !features.isEmpty {
@@ -164,7 +211,9 @@ struct RestaurantDetailView: View {
                         section("Çalışma saatleri") { WorkingHoursView(hours: hours) }
                     }
                     if let stats = detail.reviewStats, (stats.totalReviews ?? 0) > 0 {
-                        section("Değerlendirmeler") { ReviewsView(stats: stats, reviews: detail.reviews ?? []) }
+                        section("Değerlendirmeler") {
+                            ReviewsView(stats: stats, reviews: detail.reviews ?? [])
+                        }
                     }
                     locationSection(detail)
                 }
@@ -360,6 +409,8 @@ struct BookingSelection: Identifiable {
     let id = UUID()
     let detail: ListingDetail
     let slot: SlotOption?
+    /// Slot henüz yüklenmediyse akışın seçmeye çalışacağı saat (`HH:mm`).
+    var time: String? = nil
 }
 
 struct FavoriteToolbarButton: View {
@@ -449,10 +500,11 @@ struct SlotGrid: View {
 }
 
 extension SlotOption {
+    /// `slot` o tarihin kuralını taşır; etkinlik gecesi provizyonu gibi tarihe özel durumlar rozete yansır.
     var caption: String? {
         if !isBookable { return status?.isFull == true ? "Dolu" : "Kapalı" }
-        if slot.prepaymentRequired == true { return "Ön ödeme" }
         if slot.isRequestOnly { return "Onaylı" }
+        if slot.requiresPrepayment { return slot.prepaymentTitle }
         return nil
     }
 
@@ -538,10 +590,30 @@ struct ReviewsView: View {
                         .foregroundStyle(Color(.secondaryLabel))
                 }
             }
+            if let rows = stats.subRatings?.rows, !rows.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(rows, id: \.label) { row in
+                        HStack(spacing: 10) {
+                            Text(row.label).font(.footnote).frame(width: 120, alignment: .leading)
+                            ProgressView(value: row.value, total: 5).tint(Color.primary)
+                            Text(String(format: "%.1f", row.value)).font(.footnote.weight(.semibold)).monospacedDigit()
+                        }
+                    }
+                    if let noise = stats.noiseLabel {
+                        HStack { Text("Ortam").font(.footnote).frame(width: 120, alignment: .leading); Text(noise).font(.footnote.weight(.semibold)); Spacer() }
+                    }
+                }
+            }
             ForEach(reviews.prefix(5)) { review in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(review.userName ?? "Misafir").font(.subheadline.weight(.semibold))
+                        if review.verified == true {
+                            Label("Doğrulanmış", systemImage: "checkmark.seal.fill")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                                .accessibilityLabel("Doğrulanmış ziyaret")
+                        }
                         Spacer()
                         if let rating = Format.rating(review.rating?.value) {
                             Label(rating, systemImage: "star.fill").font(.caption.weight(.semibold)).foregroundStyle(MP.warm)
@@ -549,6 +621,28 @@ struct ReviewsView: View {
                     }
                     if let comment = review.comment?.nilIfBlank {
                         Text(comment).font(.subheadline).foregroundStyle(Color(.secondaryLabel))
+                    }
+                    if let photos = review.photos, !photos.isEmpty {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 8) {
+                                ForEach(photos, id: \.self) { photo in
+                                    MPRemoteImage(url: .media(photo), role: .detail)
+                                        .frame(width: 84, height: 84)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                        .accessibilityLabel("Misafir fotoğrafı")
+                                }
+                            }
+                        }
+                        .scrollIndicators(.hidden)
+                    }
+                    if let reply = review.ownerReply {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("İşletmenin yanıtı").font(.caption.weight(.semibold))
+                            Text(reply.text).font(.footnote).foregroundStyle(Color(.secondaryLabel))
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(MP.fill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
                 .padding(.vertical, 4)

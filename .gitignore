@@ -21,7 +21,7 @@ Pods/
 Carthage/Build/
 
 # Local-only configuration and secrets
-Configuration/*.local.xcconfig
+**/Configuration/*.local.xcconfig
 .env
 .env.*
 !.env.example

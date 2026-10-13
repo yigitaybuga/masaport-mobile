@@ -295,6 +295,9 @@ struct CustomerReservation: Decodable, Hashable, Identifiable {
     let customerName: String?
     let venue: Venue?
     let event: Event?
+    /// Yalnızca restoran kayıtlarında ve PENDING/CONFIRMED, giriş yapılmamış rezervasyonlarda dolu gelir.
+    var managementUrl: String? = nil
+    var createdAt: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case kind, id, uuid, status, note, venue, event
@@ -306,6 +309,8 @@ struct CustomerReservation: Decodable, Hashable, Identifiable {
         case guestCount = "guest_count"
         case checkedIn = "checked_in"
         case customerName = "customer_name"
+        case managementUrl = "management_url"
+        case createdAt = "created_at"
     }
 
     /// Sunucu kaydını yerel bilet modeline çevirir; böylece tek liste ve tek detay ekranı kullanılır.
@@ -334,7 +339,8 @@ struct CustomerReservation: Decodable, Hashable, Identifiable {
                 phone: event.venue?.phone,
                 latitude: event.latitude,
                 longitude: event.longitude,
-                createdAt: .now
+                createdAt: .now,
+                checkedIn: checkedIn
             )
         }
         guard let reservationDate, let day = DateFormat.parseAPIDay(reservationDate) else { return nil }
@@ -361,17 +367,45 @@ struct CustomerReservation: Decodable, Hashable, Identifiable {
             phone: venue?.phone,
             latitude: venue?.latitude,
             longitude: venue?.longitude,
-            createdAt: .now
+            createdAt: .now,
+            managementURL: managementUrl,
+            checkedIn: checkedIn
         )
     }
 
     private func combine(day: Date, time: String) -> Date {
-        let parts = time.split(separator: ":").compactMap { Int($0) }
-        var components = Calendar.istanbul.dateComponents([.year, .month, .day], from: day)
-        components.hour = parts.first ?? 0
-        components.minute = parts.count > 1 ? parts[1] : 0
-        return Calendar.istanbul.date(from: components) ?? day
+        SavedReservation.combine(day: day, time: time)
     }
 }
 
 struct CustomerReservationsEnvelope: Decodable { let reservations: [CustomerReservation] }
+
+// MARK: Favoriler
+
+/// Hesaba kayıtlı favori (`/customer/favorites`). Restoran veya etkinlik.
+struct CustomerFavorite: Decodable, Hashable {
+    let kind: String
+    let id: Int
+    let slug: String?
+    let title: String
+    let subtitle: String?
+    let image: String?
+    let addedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case kind, id, slug, title, subtitle, image
+        case addedAt = "added_at"
+    }
+}
+
+struct CustomerFavoritesEnvelope: Decodable { let favorites: [CustomerFavorite] }
+
+struct FavoritesSyncRequest: Encodable {
+    let listingIds: [Int]
+    let eventIds: [Int]
+
+    enum CodingKeys: String, CodingKey {
+        case listingIds = "listing_ids"
+        case eventIds = "event_ids"
+    }
+}

@@ -93,12 +93,35 @@ struct ListingReview: Codable, Hashable, Identifiable {
     let rating: APINumber?
     let comment: String?
     let date: String?
+    /// Rezervasyonla gerçekleşmiş ziyarete bağlı yorum.
+    var verified: Bool? = nil
+    var photos: [String]? = nil
+    var ownerReply: OwnerReply? = nil
+
+    struct OwnerReply: Codable, Hashable {
+        let text: String
+        let date: String?
+    }
 }
 
 struct ReviewStats: Codable, Hashable {
     let averageRating: APINumber?
     let totalReviews: Int?
     let ratingDistribution: [String: Int]?
+    var subRatings: SubRatings? = nil
+    var noiseLabel: String? = nil
+
+    struct SubRatings: Codable, Hashable {
+        let foodRating: APINumber?
+        let serviceRating: APINumber?
+        let ambienceRating: APINumber?
+        let valueRating: APINumber?
+
+        var rows: [(label: String, value: Double)] {
+            [("Yemek", foodRating), ("Servis", serviceRating), ("Ambiyans", ambienceRating), ("Fiyat/performans", valueRating)]
+                .compactMap { label, number in number?.value.map { (label, $0) } }
+        }
+    }
 }
 
 /// `/public/restaurants/:slug` detayı.
@@ -130,6 +153,13 @@ struct ListingDetail: Codable, Hashable, Identifiable {
     let bookedTodayCount: Int?
     let reviews: [ListingReview]?
     let reviewStats: ReviewStats?
+    /// Yayındaki QR menü özeti; tam menü `AppConfiguration.menuURL(slug:)` ile açılır.
+    let menu: MenuPreview?
+
+    struct MenuPreview: Codable, Hashable {
+        let slug: String
+        let totalItems: Int?
+    }
 
     /// Detay uç noktası `listing` ve `restaurant` altında aynı nesneyi döndürür.
     struct Response: Codable {

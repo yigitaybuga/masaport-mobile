@@ -87,10 +87,12 @@ struct TodayView: View {
                             MPNotice(message: errorMessage, actionTitle: "Tekrar dene") {
                                 Task { await model.load(venue: venue) }
                             }
-                        } else if model.isLoading && model.reservations.isEmpty {
+                        }
+                        if model.isLoading && model.reservations.isEmpty {
                             MPLoadingRow(title: "Bugünün akışı yükleniyor")
                                 .mpCard()
-                        } else {
+                        } else if model.errorMessage == nil || model.loadedVenueID == venue.id {
+                            // Arka plan tazelemesi başarısız olursa bu mekanın son verisi uyarının altında kalır.
                             if !attentionReservations.isEmpty {
                                 attentionSection(venueID: venue.id)
                             }
@@ -113,7 +115,10 @@ struct TodayView: View {
             }
             .ignoresSafeArea(edges: .top)
             .refreshable { await model.load(venue: venue) }
-            .task(id: venue.id) { await model.load(venue: venue) }
+            // İlk yükleme, ön plana dönüşte ve ekran açıkken dakikada bir sessiz tazeleme (widget da güncellenir).
+            .operationAutoRefresh(id: venue.id, every: .seconds(60)) { trigger in
+                await model.load(venue: venue, silent: trigger.isSilent)
+            }
         }
     }
 

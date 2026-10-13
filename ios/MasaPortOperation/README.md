@@ -3,10 +3,21 @@
 `MasaPortOperation.xcodeproj` dosyasını Xcode 26+ ile açın. Uygulama iOS 17 ve
 sonrasını hedefler.
 
-Yerel API için Debug scheme'de `MASAPORT_API_BASE_URL` varsayılanı
-`http://127.0.0.1:3000/api`'dir ve iOS Simulator içindir. Fiziksel cihazda
-güvenilir bir HTTPS geliştirme endpoint'i kullanın; production API değeri
-kaynak koda yazılmaz.
+Debug derlemeleri yerel API'ye bağlanır, canlı veriye yazmaz
+(`Configuration/Debug.xcconfig`). Simülatörde adres `http://127.0.0.1:3000/api`'dir.
+Fiziksel cihaz Mac'e aynı Wi-Fi üzerinden Bonjour adıyla
+(`http://Yigit-MacBook-Pro-2.local:3000/api`) ulaşır; bu ad DHCP ile IP değişse de
+sabit kalır. API'nin tüm arayüzlerde dinlemesi ve ilk açılışta iOS'un yerel ağ iznine
+onay verilmesi gerekir. Başka bir Mac veya sabit IP için git'e girmeyen
+`Configuration/Debug.local.xcconfig` dosyasına örneğin
+`MASAPORT_DEV_HOST[sdk=iphoneos*] = 192.168.1.20` yazın. Release yapılandırması
+`https://api.masaport.com/api` kullanır.
+
+Erişim token'ı 401 aldığında tek uçuşlu bir yenileme yapılır ve istek bir kez
+tekrarlanır; refresh token sunucu tarafından reddedilirse oturum kapatılıp giriş ekranına
+dönülür. Ağ kesintisinde oturum korunur. Ekranlar ön plana dönüşte, Bugün ve
+Etkinlikler ayrıca açıkken dakikada bir sessizce yenilenir; WebSocket yeniden
+bağlandığında aradaki değişiklikler için veri yeniden yüklenir.
 
 Bu ilk dilim Faz 1 altyapısıdır. iOS uygulaması `/mobile/auth/*` ile kısa
 ömürlü erişim token'ı ve Keychain'deki döndürülen refresh token'ı kullanır.
@@ -60,7 +71,7 @@ verilerle yanıtlanır; herhangi bir e-posta ve parola ile giriş yapılır. Rel
 derlemelerine bu kod dahil edilmez.
 
 ```bash
-xcrun simctl launch --terminate-running-process <UDID> com.masaport.operation.debug --setenv MASAPORT_DEMO=1
+SIMCTL_CHILD_MASAPORT_DEMO=1 xcrun simctl launch --terminate-running-process <UDID> com.masaport.operation.debug
 ```
 
 ## Widget ve App Group
