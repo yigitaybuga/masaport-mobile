@@ -21,9 +21,9 @@ struct ProfileView: View {
                 }
 
                 Section {
-                    if let helpURL = URL(string: "https://help.masaport.com") {
+                    if let helpURL = URL(string: "https://yardim.masaport.com") {
                         Link(destination: helpURL) {
-                            settingsRow(title: "Yardım merkezi", detail: "help.masaport.com", systemImage: "questionmark.circle.fill", tone: .info, isExternal: true)
+                            settingsRow(title: "Yardım merkezi", detail: "yardim.masaport.com", systemImage: "questionmark.circle.fill", tone: .info, isExternal: true)
                         }
                     }
                     settingsRow(title: "Güvenli mobil oturum", detail: "Erişim bilgileri Keychain'de tutulur; çıkışta bu cihaz için iptal edilir.", systemImage: "lock.shield.fill", tone: .positive)
