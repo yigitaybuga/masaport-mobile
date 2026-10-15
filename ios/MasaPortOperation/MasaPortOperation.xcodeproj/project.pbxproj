@@ -30,6 +30,8 @@
 		A10000000000000000000021 /* Shared/DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* Shared/DesignSystem.swift */; };
 		A10000000000000000000022 /* Features/Waitlist/WaitlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */; };
 		A10000000000000000000023 /* Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* Resources/Assets.xcassets */; };
+		A10000000000000000000090 /* Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000090 /* Resources/PrivacyInfo.xcprivacy */; };
+		A10000000000000000000091 /* Resources/PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000090 /* Resources/PrivacyInfo.xcprivacy */; };
 		A10000000000000000000024 /* Features/Waitlist/WaitlistViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */; };
 		A10000000000000000000025 /* Features/Waitlist/WaitlistPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */; };
 		A10000000000000000000026 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */; };
@@ -126,6 +128,7 @@
 		A20000000000000000000026 /* Shared/DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DesignSystem.swift; sourceTree = "<group>"; };
 		A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistView.swift; sourceTree = "<group>"; };
 		A20000000000000000000028 /* Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000090 /* Resources/PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Resources/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistViewModel.swift; sourceTree = "<group>"; };
 		A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/Waitlist/WaitlistPresentation.swift; sourceTree = "<group>"; };
 		A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/Widget/OperationWidgetConfiguration.swift; sourceTree = "<group>"; };
@@ -243,6 +246,7 @@
 				A20000000000000000000015 /* Features/Profile/ProfileView.swift */,
 				A20000000000000000000017 /* Resources/Info.plist */,
 				A20000000000000000000028 /* Resources/Assets.xcassets */,
+				A20000000000000000000090 /* Resources/PrivacyInfo.xcprivacy */,
 				A20000000000000000000046 /* Resources/MasaPortOperation.entitlements */,
 			);
 			path = MasaPortOperation;
@@ -395,6 +399,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000023 /* Resources/Assets.xcassets in Resources */,
+				A10000000000000000000090 /* Resources/PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,6 +408,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000043 /* Resources/Assets.xcassets in Resources */,
+				A10000000000000000000091 /* Resources/PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
