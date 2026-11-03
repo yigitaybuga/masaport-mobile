@@ -14,6 +14,9 @@ struct HostDeskView: View {
     @State private var showsDatePicker = false
     @State private var showsWaitlist = false
     @State private var serviceCandidate: (reservation: Reservation, action: ServiceAction)?
+    /// Kalktı: hesap tutarı (isteğe bağlı) soran sayfa.
+    @State private var closingReservation: Reservation?
+    @State private var showsWalkInQueue = false
     @State private var moveCandidate: (reservation: Reservation, table: VenueTable)?
     @State private var viewMode: DeskViewMode = .list
     @State private var openedReservation: Reservation?
@@ -68,6 +71,21 @@ struct HostDeskView: View {
             }
             .navigationDestination(isPresented: $showsWaitlist) {
                 WaitlistView()
+            }
+            .navigationDestination(isPresented: $showsWalkInQueue) {
+                WalkInQueueView()
+            }
+            .sheet(item: $closingReservation) { reservation in
+                ServiceCloseSheet(reservation: reservation) { amount in
+                    guard let venueID = session.activeVenue?.id else { return "Mekan bulunamadı." }
+                    // Liste arada yenilendiyse güncel sürümle gönderilir; eski sürüm kesin 409 alırdı.
+                    let current = model.reservations.first { $0.id == reservation.id } ?? reservation
+                    if await model.updateServiceStatus(current, to: .left, billAmount: amount, venueID: venueID, date: selectedDate) {
+                        checkInSuccessCount += 1
+                        return nil
+                    }
+                    return model.errorMessage ?? "Servis durumu güncellenemedi. Tekrar deneyin."
+                }
             }
             .confirmationDialog(
                 "Misafir geldi mi?",
@@ -171,6 +189,15 @@ struct HostDeskView: View {
         return parts.joined(separator: " ")
     }
 
+    /// Kalktı hesap tutarını soran sayfayı açar; diğer adımlar onay diyaloğuyla ilerler.
+    private func requestServiceAction(_ action: ServiceAction, for reservation: Reservation) {
+        if action.asksForBillAmount {
+            closingReservation = reservation
+        } else {
+            serviceCandidate = (reservation, action)
+        }
+    }
+
     private func performCheckIn(_ reservation: Reservation, venueID: Int, force: Bool) async {
         switch await model.checkIn(reservation, venueID: venueID, date: selectedDate, force: force) {
         case .completed:
@@ -254,6 +281,11 @@ struct HostDeskView: View {
 
             if isToday && !model.reservations.isEmpty {
                 deskSummary
+                    .mpPlainRow(vertical: 4)
+            }
+
+            if isToday && !model.walkInQueue.isEmpty {
+                walkInQueueSummary
                     .mpPlainRow(vertical: 4)
             }
 
@@ -345,6 +377,29 @@ struct HostDeskView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(viewMode == .list ? "Salon görünümüne geç" : "Liste görünümüne geç")
             Button {
+                showsWalkInQueue = true
+            } label: {
+                Image(systemName: "door.left.hand.open")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(MP.brand)
+                    .frame(width: 36, height: 34)
+                    .background(MP.brand.opacity(0.12), in: Capsule())
+                    .overlay(alignment: .topTrailing) {
+                        if isToday && !model.walkInQueue.isEmpty {
+                            Text(model.walkInQueue.count, format: .number)
+                                .font(.system(size: 10, weight: .bold))
+                                .monospacedDigit()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .frame(minWidth: 16, minHeight: 16)
+                                .background(MP.info, in: Capsule())
+                                .offset(x: 5, y: -5)
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isToday && !model.walkInQueue.isEmpty ? "Kapı sırası, \(model.walkInQueue.count) grup bekliyor" : "Kapı sırası")
+            Button {
                 showsWaitlist = true
             } label: {
                 Image(systemName: "hourglass")
@@ -356,6 +411,45 @@ struct HostDeskView: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Bekleme listesi")
         }
+    }
+
+    // MARK: Walk-in queue
+
+    /// Kapıda masa bekleyenler; dokununca kapı sırası açılır.
+    private var walkInQueueSummary: some View {
+        let queue = model.walkInQueue
+        let now = Date.now
+        let overdue = queue.count { $0.isOverdue(at: now) }
+        let guests = queue.reduce(0) { $0 + $1.partySize }
+        let longestWait = queue.map { $0.waitedMinutes(at: now) }.max() ?? 0
+        return Button {
+            showsWalkInQueue = true
+        } label: {
+            HStack(spacing: 12) {
+                MPIconTile(systemImage: "door.left.hand.open", tone: overdue > 0 ? .critical : .info, size: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Kapı sırası")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color(.label))
+                    Text("\(queue.count) grup · \(guests) kişi · en uzun \(longestWait) dk")
+                        .font(.caption)
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 6)
+                if overdue > 0 {
+                    MPPill(text: "\(overdue) süre aşıldı", tone: .critical)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color(.tertiaryLabel))
+            }
+            .mpCard(padding: 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Kapı sırası: \(queue.count) grup, \(guests) kişi bekliyor\(overdue > 0 ? ", \(overdue) grubun süresi aşıldı" : "")")
+        .accessibilityHint("Sırayı açar")
     }
 
     private var isCustomDate: Bool { !isToday && !OperationDate.isTomorrow(selectedDate) }
@@ -466,7 +560,7 @@ struct HostDeskView: View {
                 .tint(MP.positive)
             } else if reservation.isInside, let next = ServiceAction.current(for: reservation.serviceStatus).next {
                 Button {
-                    serviceCandidate = (reservation, next)
+                    requestServiceAction(next, for: reservation)
                 } label: {
                     Label(next.title, systemImage: next.symbol)
                 }
@@ -484,7 +578,7 @@ struct HostDeskView: View {
                 Section("Servis adımı") {
                     ForEach(ServiceAction.allCases.filter { $0 != current }) { action in
                         Button(action.title, systemImage: action.symbol) {
-                            serviceCandidate = (reservation, action)
+                            requestServiceAction(action, for: reservation)
                         }
                     }
                 }

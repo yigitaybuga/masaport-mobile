@@ -259,6 +259,240 @@ struct MasaPortOperationTests {
         #expect(!json.contains("Kişisel not"))
     }
 
+    // MARK: Misafir bağlamı, hesap tutarı ve kapı sırası
+
+    /// `GET /reservations/:venueId` yanıtındaki bir kaydın kısaltılmış hali (Prisma alanları camelCase, CRM alanları snake_case).
+    private static let apiReservationJSON = """
+    {
+      "id": 501, "uuid": "0F8B2C7A-1111-4C1E-9A3B-0123456789AB", "venueId": 12,
+      "reservationDate": "2026-11-02", "startTime": "19:30", "endTime": "21:00", "guestCount": 4,
+      "status": "CONFIRMED", "serviceStatus": "EMPTY", "checkedIn": false, "updatedAt": "2026-11-02T15:00:00.000Z",
+      "customer_name": "Bağlam Testi", "customer_phone": "5550000000", "note": "Pasta getirecekler",
+      "tables": [{ "id": 3, "name": "A3", "capacity": 4, "zone": "Salon", "serviceStatus": "EMPTY" }],
+      "occasion": "birthday",
+      "guestPreferences": { "dietary": ["vegan", "nut_allergy"], "seating": ["window"] },
+      "guest_details": {
+        "occasion": "birthday", "occasion_label": "Doğum günü",
+        "dietary": ["Vegan", "Kuruyemiş alerjisi"], "seating": ["Pencere kenarı"],
+        "allergies": ["Kuruyemiş alerjisi"], "has_allergy": true
+      },
+      "customer_vip_tier": "GOLD", "customer_vip_score": 72, "customer_no_show_count": 2,
+      "arrivalStatus": "LATE", "arrivalNote": "Misafir geliş teyidi: 30 dakika gecikeceğim. (2026-11-02 19:30)",
+      "arrivalStatusAt": "2026-11-02T15:10:00.000Z", "arrivalStatusBy": null
+    }
+    """
+
+    @Test func reservationDecodesGuestContextFromTheAPI() throws {
+        let reservation = try JSONDecoder().decode(Reservation.self, from: Data(Self.apiReservationJSON.utf8))
+
+        #expect(reservation.occasion == "birthday")
+        #expect(reservation.guestPreferences == ReservationGuestPreferences(dietary: ["vegan", "nut_allergy"], seating: ["window"]))
+        #expect(reservation.guestDetails?.occasionLabel == "Doğum günü")
+        #expect(reservation.guestDetails?.hasAllergy == true)
+        #expect(reservation.vipTier == "GOLD")
+        #expect(reservation.noShowCount == 2)
+        #expect(reservation.arrivalStatus == "LATE")
+        #expect(reservation.arrivalStatusBy == nil)
+
+        #expect(reservation.allergyLabels == ["Kuruyemiş alerjisi"])
+        #expect(reservation.otherDietaryLabels == ["Vegan"])
+        #expect(reservation.seatingLabels == ["Pencere kenarı"])
+        #expect(reservation.occasionLabel == "Doğum günü")
+        #expect(reservation.vipLevel == .gold)
+        #expect(reservation.previousNoShowCount == 2)
+        #expect(reservation.arrivalDelayMinutes == 30)
+        #expect(reservation.arrivalIndicator?.text == "30 dk gecikecek")
+        #expect(reservation.insights.map(\.kind) == [.allergy, .arrival, .vip, .occasion, .noShow, .dietary, .seating])
+    }
+
+    @Test func malformedOrMissingGuestContextKeepsTheReservationReadable() throws {
+        let malformed = """
+        {
+          "id": 502, "uuid": "U-502", "reservationDate": "2026-11-02", "startTime": "20:00", "endTime": "21:30",
+          "guestCount": 2, "status": "CONFIRMED", "serviceStatus": null, "checkedIn": false,
+          "updatedAt": "2026-11-02T15:00:00.000Z", "customer_name": "Bozuk Veri", "customer_phone": "",
+          "note": null, "tables": [],
+          "occasion": 7, "guestPreferences": "oops", "guest_details": [],
+          "customer_vip_tier": null, "customer_no_show_count": "3",
+          "arrivalStatus": "", "arrivalNote": { "text": "x" }, "arrivalStatusBy": "9"
+        }
+        """
+        let reservation = try JSONDecoder().decode(Reservation.self, from: Data(malformed.utf8))
+        #expect(reservation.id == 502)
+        #expect(reservation.occasion == nil)
+        #expect(reservation.guestPreferences == nil)
+        #expect(reservation.guestDetails == nil)
+        #expect(reservation.vipTier == nil)
+        #expect(reservation.noShowCount == 3)
+        #expect(reservation.arrivalStatus == nil)
+        #expect(reservation.arrivalNote == nil)
+        #expect(reservation.arrivalStatusBy == 9)
+        #expect(reservation.insights.map(\.kind) == [.noShow])
+
+        let legacy = """
+        {
+          "id": 503, "uuid": "U-503", "reservationDate": "2026-11-02", "startTime": "20:00", "endTime": "21:30",
+          "guestCount": 2, "status": "NO_SHOW", "checkedIn": false, "updatedAt": "2026-11-02T15:00:00.000Z",
+          "customer_name": "Eski Sunucu", "customer_phone": "5550000000", "tables": [],
+          "guestPreferences": { "dietary": ["gluten_free", 4, "halal"], "seating": null },
+          "customer_no_show_count": 1, "arrivalStatus": "NOTIFIED", "arrivalNote": "Misafir geliş teyidi: Geliyorum."
+        }
+        """
+        let fallback = try JSONDecoder().decode(Reservation.self, from: Data(legacy.utf8))
+        // `guest_details` yoksa etiketler ham anahtarlardan üretilir.
+        #expect(fallback.guestPreferences?.dietary == ["gluten_free", "halal"])
+        #expect(fallback.allergyLabels == ["Glütensiz"])
+        #expect(fallback.otherDietaryLabels == ["Helal"])
+        // Bu kayıt "gelmedi" ise kendisi sayılmaz; kapanmış kayıtta geliş rozeti gösterilmez.
+        #expect(fallback.previousNoShowCount == 0)
+        #expect(fallback.arrivalIndicator == nil)
+    }
+
+    @Test func guestArrivalReplyAndStaffNoticeAreDistinguished() throws {
+        var reservation = try JSONDecoder().decode(Reservation.self, from: Data(Self.apiReservationJSON.utf8))
+        reservation.arrivalStatus = "notified"
+        reservation.arrivalNote = "Misafir geliş teyidi: Geliyorum. (2026-11-02 19:30)"
+        #expect(reservation.arrivalIndicator?.text == "Geliyorum")
+        #expect(reservation.arrivalIndicator?.tone == .positive)
+
+        reservation.arrivalStatusBy = 4
+        reservation.arrivalNote = "Aradı, park yeri arıyor"
+        #expect(reservation.arrivalIndicator?.text == "Haber verdi")
+
+        reservation.arrivalStatus = "LATE"
+        #expect(reservation.arrivalIndicator?.text == "Gecikti")
+
+        reservation.checkedIn = true
+        #expect(reservation.arrivalIndicator == nil)
+    }
+
+    @Test func localUpdatesAndDemoRoundTripKeepTheGuestContext() throws {
+        let reservation = try JSONDecoder().decode(Reservation.self, from: Data(Self.apiReservationJSON.utf8))
+        let seated = reservation
+            .updatingTables([ReservationTableUpdate(id: 4, name: "A4", capacity: 4)], updatedAt: "2026-11-02T15:20:00.000Z")
+            .updatingServiceStatus(ReservationServiceStatusUpdate(serviceStatus: "SEATED", status: "CONFIRMED", checkedIn: true, updatedAt: "2026-11-02T15:21:00.000Z"))
+            .updating(status: "CONFIRMED", updatedAt: "2026-11-02T15:22:00.000Z")
+        #expect(seated.tables.map(\.name) == ["A4"])
+        #expect(seated.checkedIn)
+        #expect(seated.guestDetails == reservation.guestDetails)
+        #expect(seated.vipTier == "GOLD")
+        #expect(seated.noShowCount == 2)
+
+        let roundTrip = try JSONDecoder().decode(Reservation.self, from: JSONEncoder().encode(reservation))
+        #expect(roundTrip == reservation)
+    }
+
+    @Test func billAmountInputMatchesTheServerFormat() {
+        #expect(BillAmountInput.parse("") == .empty)
+        #expect(BillAmountInput.parse("   ") == .empty)
+        #expect(BillAmountInput.parse("2500") == .valid("2500"))
+        #expect(BillAmountInput.parse("2500,5") == .valid("2500.5"))
+        #expect(BillAmountInput.parse("2500.50") == .valid("2500.50"))
+        #expect(BillAmountInput.parse("₺ 2 500,00") == .valid("2500.00"))
+        #expect(BillAmountInput.parse("0") == .valid("0"))
+        #expect(BillAmountInput.parse("2.500") == .invalid)
+        #expect(BillAmountInput.parse("2.500,50") == .invalid)
+        #expect(BillAmountInput.parse("123456789") == .invalid)
+        #expect(BillAmountInput.parse(",50") == .invalid)
+        #expect(BillAmountInput.parse("12a") == .invalid)
+        #expect(BillAmountInput.parse("-5") == .invalid)
+    }
+
+    @Test func serviceStatusRequestSendsTheBillAmountOnlyWhenGiven() throws {
+        struct Sent: Decodable {
+            let serviceStatus: String
+            let expectedUpdatedAt: String
+            let billAmount: String?
+            enum CodingKeys: String, CodingKey {
+                case serviceStatus = "service_status"
+                case expectedUpdatedAt = "expected_updated_at"
+                case billAmount = "bill_amount"
+            }
+        }
+        let withAmount = try JSONDecoder().decode(Sent.self, from: JSONEncoder().encode(
+            ServiceStatusUpdateRequest(serviceStatus: "LEFT", expectedUpdatedAt: "2026-11-02T15:00:00.000Z", billAmount: "2500.50")
+        ))
+        #expect(withAmount.billAmount == "2500.50")
+        #expect(withAmount.serviceStatus == "LEFT")
+
+        let encoded = try JSONEncoder().encode(ServiceStatusUpdateRequest(serviceStatus: "LEFT", expectedUpdatedAt: "2026-11-02T15:00:00.000Z"))
+        #expect(!(String(data: encoded, encoding: .utf8) ?? "").contains("bill_amount"))
+    }
+
+    @Test func cancellationReasonsMatchTheAPIAndEncodeOnlyWhenGiven() throws {
+        #expect(ReservationCancellationReason.allCases.map(\.rawValue) == [
+            "guest_request", "guest_no_contact", "duplicate", "venue_closed",
+            "capacity_issue", "weather", "payment_issue", "other"
+        ])
+        #expect(ReservationCancellationReason.other.accepts(note: "  ab ") == false)
+        #expect(ReservationCancellationReason.other.accepts(note: "Rezervasyon tekrarlandı"))
+        #expect(ReservationCancellationReason.guestRequest.accepts(note: ""))
+        #expect(!ReservationCancellationReason.guestRequest.accepts(note: String(repeating: "a", count: 501)))
+
+        let cancel = try #require(String(data: JSONEncoder().encode(ReservationStatusRequest(
+            status: "CANCELLED", expectedUpdatedAt: "2026-11-02T15:00:00.000Z",
+            cancellationReason: "other", cancellationNote: "Etkinlik ertelendi"
+        )), encoding: .utf8))
+        #expect(cancel.contains("\"cancellation_reason\":\"other\""))
+        #expect(cancel.contains("\"cancellation_note\":\"Etkinlik ertelendi\""))
+        let confirm = try #require(String(data: JSONEncoder().encode(ReservationStatusRequest(
+            status: "CONFIRMED", expectedUpdatedAt: "2026-11-02T15:00:00.000Z"
+        )), encoding: .utf8))
+        #expect(!confirm.contains("cancellation"))
+
+        var reservation = try JSONDecoder().decode(Reservation.self, from: Data(Self.apiReservationJSON.utf8))
+        #expect(reservation.cancellationReason == nil)
+        reservation.cancellationReason = "WEATHER"
+        #expect(reservation.cancellationReasonTitle == "Hava koşulları")
+        reservation.cancellationReason = "unknown_code"
+        #expect(reservation.cancellationReasonTitle == nil)
+    }
+
+    @Test func walkInQueueDecodesTheWebPanelPayload() throws {
+        let json = """
+        {
+          "active": [
+            { "id": 7, "uuid": "q-7", "customerName": "Kapı Testi", "customerPhone": "+905550000000", "customerEmail": null,
+              "partySize": 3, "quotedWaitMinutes": 15, "note": "Bahçe", "status": "WAITING", "position": 1,
+              "waitedMinutes": 4, "remainingMinutes": 11, "overdue": false, "notifiedAt": null, "seatedAt": null,
+              "closedAt": null, "reservationId": null, "createdAt": "2026-11-02T16:00:00.000Z",
+              "statusUrl": "https://app.masaport.com/public/sira/q-7" },
+            { "id": 8, "customerName": "Telefonsuz", "customerPhone": null, "partySize": 2,
+              "quotedWaitMinutes": 20, "status": "NOTIFIED", "position": 2, "createdAt": "2026-11-02T16:05:00Z" }
+          ],
+          "recent": [],
+          "minutesPerParty": 9,
+          "suggestedQuoteMinutes": 25
+        }
+        """
+        let snapshot = try JSONDecoder().decode(WalkInQueueSnapshot.self, from: Data(json.utf8))
+        #expect(snapshot.active.count == 2)
+        #expect(snapshot.suggestedQuoteMinutes == 25)
+        let first = snapshot.active[0]
+        #expect(first.customerEmail == nil)
+        #expect(first.phoneURL?.absoluteString == "tel:+905550000000")
+        #expect(first.walkInPrefill.queueEntryID == 7)
+        #expect(first.walkInPrefill.guestCount == 3)
+
+        let joined = try #require(first.joinedAt)
+        #expect(first.waitedMinutes(at: joined.addingTimeInterval(10 * 60)) == 10)
+        #expect(!first.isOverdue(at: joined.addingTimeInterval(15 * 60)))
+        #expect(first.isOverdue(at: joined.addingTimeInterval(16 * 60)))
+
+        let second = snapshot.active[1]
+        #expect(second.isNotified)
+        #expect(!second.hasContactChannel)
+        #expect(second.joinedAt != nil)
+        #expect(WalkInQueueMessage.ready(
+            WalkInQueueNotifyResult(entry: second, delivery: WalkInQueueDelivery(status: "SKIPPED", reason: "Telefon yok."), emailDelivery: nil),
+            entry: second
+        ) == "Telefonsuz haberdar edildi olarak işaretlendi. Misafire sözlü olarak haber verin.")
+        #expect(WalkInQueueMessage.ready(
+            WalkInQueueNotifyResult(entry: first, delivery: WalkInQueueDelivery(status: "SENT", reason: nil), emailDelivery: nil),
+            entry: first
+        ).contains("WhatsApp ile gönderildi"))
+    }
+
     private func makeWaitlistEntry(id: Int, status: String) -> WaitlistEntry {
         WaitlistEntry(
             id: id,
@@ -645,6 +879,101 @@ struct SessionAndConcurrencyTests {
         #expect(converted.status == "CONVERTED")
         #expect(converted.venueID == 13)
         #expect(log.count("/waitlist/entry/201/status") == 2)
+    }
+
+    @Test func leavingSendsTheBillAmountWithTheCurrentVersion() async throws {
+        let store = DemoStore()
+        let log = RequestLog()
+        let api = APIClient(session: StubURLProtocol.makeSession { request, body in
+            if request.httpMethod == "PUT", apiPath(request).hasSuffix("/service-status") {
+                log.record("service-status", body: body)
+            }
+            let (statusCode, data) = store.respond(method: request.httpMethod ?? "GET", url: request.url!, body: body)
+            return .http(statusCode, data)
+        })
+        api.setAccessToken("test-access")
+        let model = HostDeskViewModel(api: api)
+        await model.load(venueID: 12)
+        let seated = try #require(model.reservations.first { $0.id == 102 })
+        #expect(seated.isInside)
+
+        #expect(await model.updateServiceStatus(seated, to: .left, billAmount: "2500.50", venueID: 12))
+        struct Sent: Decodable {
+            let billAmount: String?
+            let expectedUpdatedAt: String
+            enum CodingKeys: String, CodingKey {
+                case billAmount = "bill_amount"
+                case expectedUpdatedAt = "expected_updated_at"
+            }
+        }
+        let sent = try JSONDecoder().decode(Sent.self, from: #require(log.body("service-status")))
+        #expect(sent.billAmount == "2500.50")
+        #expect(sent.expectedUpdatedAt == seated.updatedAt)
+        #expect(model.reservations.first { $0.id == 102 }?.status == "COMPLETED")
+        // Demo verisi: misafir bağlamı listede gelir, kapı sırası da bugünün yüklemesine eklenir.
+        #expect(model.reservations.first { $0.id == 104 }?.allergyLabels == ["Kuruyemiş alerjisi"])
+        #expect(!model.walkInQueue.isEmpty)
+    }
+
+    @Test func cancellingSendsTheReasonAndKeepsItOnTheRecord() async throws {
+        let store = DemoStore()
+        let api = APIClient(session: StubURLProtocol.makeSession { request, body in
+            let (statusCode, data) = store.respond(method: request.httpMethod ?? "GET", url: request.url!, body: body)
+            return .http(statusCode, data)
+        })
+        api.setAccessToken("test-access")
+        let reservation: Reservation = try await api.get("/reservations/12/109")
+        let model = ReservationDetailViewModel(reservation: reservation, venueID: 12, api: api)
+
+        // "Diğer" açıklamasız reddedilir; kayıt değişmez.
+        #expect(await model.updateStatus("CANCELLED", cancellationReason: .other, cancellationNote: " ") == false)
+        #expect(model.reservation.status == "CONFIRMED")
+
+        #expect(await model.updateStatus("CANCELLED", cancellationReason: .other, cancellationNote: "Grup ertelendi"))
+        #expect(model.reservation.status == "CANCELLED")
+        #expect(model.reservation.cancellationReason == "other")
+        #expect(model.reservation.cancellationNote == "Grup ertelendi")
+        #expect(model.reservation.cancellationReasonTitle == "Diğer")
+    }
+
+    @Test func walkInQueueAddNotifyAndSeatThroughTheWalkInForm() async throws {
+        let store = DemoStore()
+        let api = APIClient(session: StubURLProtocol.makeSession { request, body in
+            let (statusCode, data) = store.respond(method: request.httpMethod ?? "GET", url: request.url!, body: body)
+            return .http(statusCode, data)
+        })
+        api.setAccessToken("test-access")
+        let queue = WalkInQueueViewModel(api: api)
+        await queue.load(venueID: 12)
+        let initialCount = queue.entries.count
+
+        let added = await queue.add(
+            WalkInQueueCreateRequest(customerName: "Sıra Testi", customerPhone: "+90 555 000 00 00", customerEmail: nil,
+                                     partySize: 2, quotedWaitMinutes: 20, note: nil, sendLink: true),
+            venueID: 12
+        )
+        #expect(added?.contains("sıraya eklendi") == true)
+        let entry = try #require(queue.entries.first { $0.customerName == "Sıra Testi" })
+        #expect(queue.entries.count == initialCount + 1)
+        #expect(entry.position == queue.entries.count)
+
+        #expect(await queue.notifyReady(entry, venueID: 12) != nil)
+        #expect(queue.entries.first { $0.id == entry.id }?.isNotified == true)
+
+        // "Oturt": walk-in formu sıra kaydıyla gönderilir; kayıt oluşunca sıra kapanır.
+        let walkIn = WalkInViewModel(api: api, prefill: entry.walkInPrefill)
+        #expect(walkIn.customerName == "Sıra Testi")
+        #expect(await walkIn.submit(venueID: 12))
+        await queue.load(venueID: 12)
+        #expect(!queue.entries.contains { $0.id == entry.id })
+
+        // Aynı kayıt ikinci kez oturtulamaz (başka cihaz yarışı).
+        #expect(await WalkInViewModel(api: api, prefill: entry.walkInPrefill).submit(venueID: 12) == false)
+
+        let remaining = try #require(queue.entries.first)
+        #expect(await queue.close(remaining, status: "CANCELLED", venueID: 12) != nil)
+        #expect(!queue.entries.contains { $0.id == remaining.id })
+        #expect(queue.errorMessage == nil)
     }
 
     @Test func loadGateSkipsOverlappingSilentRefreshesAndStaleResponses() throws {

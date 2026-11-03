@@ -66,6 +66,11 @@
 		A10000000000000000000055 /* Shared/SearchHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000058 /* Shared/SearchHistoryStore.swift */; };
 		A10000000000000000000057 /* Shared/AutoRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000060 /* Shared/AutoRefresh.swift */; };
 		A10000000000000000000056 /* Features/HostDesk/HostDeskFloorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */; };
+		A10000000000000000000058 /* Core/Models/WalkInQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000061 /* Core/Models/WalkInQueue.swift */; };
+		A10000000000000000000059 /* Features/WalkInQueue/WalkInQueueViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000062 /* Features/WalkInQueue/WalkInQueueViewModel.swift */; };
+		A10000000000000000000060 /* Features/WalkInQueue/WalkInQueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000063 /* Features/WalkInQueue/WalkInQueueView.swift */; };
+		A10000000000000000000061 /* Features/HostDesk/ReservationGuestInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000064 /* Features/HostDesk/ReservationGuestInsights.swift */; };
+		A10000000000000000000062 /* Features/HostDesk/ServiceCloseSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000065 /* Features/HostDesk/ServiceCloseSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -161,6 +166,11 @@
 		A20000000000000000000058 /* Shared/SearchHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/SearchHistoryStore.swift; sourceTree = "<group>"; };
 		A20000000000000000000060 /* Shared/AutoRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/AutoRefresh.swift; sourceTree = "<group>"; };
 		A20000000000000000000059 /* Features/HostDesk/HostDeskFloorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/HostDeskFloorView.swift; sourceTree = "<group>"; };
+		A20000000000000000000061 /* Core/Models/WalkInQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core/Models/WalkInQueue.swift; sourceTree = "<group>"; };
+		A20000000000000000000062 /* Features/WalkInQueue/WalkInQueueViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/WalkInQueue/WalkInQueueViewModel.swift; sourceTree = "<group>"; };
+		A20000000000000000000063 /* Features/WalkInQueue/WalkInQueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/WalkInQueue/WalkInQueueView.swift; sourceTree = "<group>"; };
+		A20000000000000000000064 /* Features/HostDesk/ReservationGuestInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/ReservationGuestInsights.swift; sourceTree = "<group>"; };
+		A20000000000000000000065 /* Features/HostDesk/ServiceCloseSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Features/HostDesk/ServiceCloseSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -237,6 +247,11 @@
 				A20000000000000000000027 /* Features/Waitlist/WaitlistView.swift */,
 				A20000000000000000000029 /* Features/Waitlist/WaitlistViewModel.swift */,
 				A20000000000000000000030 /* Features/Waitlist/WaitlistPresentation.swift */,
+				A20000000000000000000061 /* Core/Models/WalkInQueue.swift */,
+				A20000000000000000000062 /* Features/WalkInQueue/WalkInQueueViewModel.swift */,
+				A20000000000000000000063 /* Features/WalkInQueue/WalkInQueueView.swift */,
+				A20000000000000000000064 /* Features/HostDesk/ReservationGuestInsights.swift */,
+				A20000000000000000000065 /* Features/HostDesk/ServiceCloseSheet.swift */,
 				A20000000000000000000031 /* Shared/Widget/OperationWidgetConfiguration.swift */,
 				A20000000000000000000032 /* Shared/Widget/OperationWidgetReservation.swift */,
 				A20000000000000000000033 /* Shared/Widget/OperationWidgetSnapshot.swift */,
@@ -454,6 +469,11 @@
 				A10000000000000000000022 /* Features/Waitlist/WaitlistView.swift in Sources */,
 				A10000000000000000000024 /* Features/Waitlist/WaitlistViewModel.swift in Sources */,
 				A10000000000000000000025 /* Features/Waitlist/WaitlistPresentation.swift in Sources */,
+				A10000000000000000000058 /* Core/Models/WalkInQueue.swift in Sources */,
+				A10000000000000000000059 /* Features/WalkInQueue/WalkInQueueViewModel.swift in Sources */,
+				A10000000000000000000060 /* Features/WalkInQueue/WalkInQueueView.swift in Sources */,
+				A10000000000000000000061 /* Features/HostDesk/ReservationGuestInsights.swift in Sources */,
+				A10000000000000000000062 /* Features/HostDesk/ServiceCloseSheet.swift in Sources */,
 				A10000000000000000000026 /* Shared/Widget/OperationWidgetConfiguration.swift in Sources */,
 				A10000000000000000000027 /* Shared/Widget/OperationWidgetReservation.swift in Sources */,
 				A10000000000000000000028 /* Shared/Widget/OperationWidgetSnapshot.swift in Sources */,
@@ -577,6 +597,7 @@
 				CODE_SIGN_ENTITLEMENTS = MasaPortOperation/Resources/MasaPortOperation.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7P4DGRNCE6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MasaPortOperation/Resources/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -655,6 +676,7 @@
 				CODE_SIGN_ENTITLEMENTS = MasaPortOperationWidget/MasaPortOperationWidget.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7P4DGRNCE6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MasaPortOperationWidget/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

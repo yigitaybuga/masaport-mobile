@@ -4,17 +4,38 @@ struct Reservation: Codable, Identifiable, Hashable {
     let id: Int
     let uuid: String
     let reservationDate: String
-    let startTime: String
-    let endTime: String
-    let guestCount: Int
-    let status: String
-    let serviceStatus: String?
-    let customerName: String
-    let customerPhone: String
-    let note: String?
-    let tables: [VenueTable]
-    let checkedIn: Bool
-    let updatedAt: String
+    var startTime: String
+    var endTime: String
+    var guestCount: Int
+    var status: String
+    var serviceStatus: String?
+    var customerName: String
+    var customerPhone: String
+    var note: String?
+    var tables: [VenueTable]
+    var checkedIn: Bool
+    var updatedAt: String
+
+    // Misafir bağlamı (özel gün, tercih/alerji, VIP, gelmeme geçmişi, geliş teyidi). Sunucu bu alanları
+    // göndermezse veya beklenmedik biçimde gönderirse yalnızca bu alanlar boş kalır; rezervasyon okunur.
+    /// Özel gün anahtarı: birthday, anniversary, date_night, business, celebration.
+    var occasion: String? = nil
+    /// Ham tercih anahtarları (`guestPreferences`); okunur etiketler `guestDetails` içindedir.
+    var guestPreferences: ReservationGuestPreferences? = nil
+    /// Sunucunun etiketlenmiş özeti (`guest_details`).
+    var guestDetails: ReservationGuestDetails? = nil
+    /// STANDARD, SILVER, GOLD, PLATINUM.
+    var vipTier: String? = nil
+    /// Misafirin bu mekândaki toplam gelmeme sayısı; bu kayıt "gelmedi" ise kendisi de dahildir.
+    var noShowCount: Int? = nil
+    /// EXPECTED, LATE, NOTIFIED, ARRIVED, NO_SHOW.
+    var arrivalStatus: String? = nil
+    var arrivalNote: String? = nil
+    /// Geliş durumunu işaretleyen personel; boşsa durum misafirin kendi yanıtıdır.
+    var arrivalStatusBy: Int? = nil
+    /// İptal nedeni kodu (`ReservationCancellationReason`) ve serbest not; eski kayıtlarda boş.
+    var cancellationReason: String? = nil
+    var cancellationNote: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, uuid, status, note, tables, checkedIn, updatedAt
@@ -25,7 +46,149 @@ struct Reservation: Codable, Identifiable, Hashable {
         case serviceStatus
         case customerName = "customer_name"
         case customerPhone = "customer_phone"
+        case occasion
+        case guestPreferences
+        case guestDetails = "guest_details"
+        case vipTier = "customer_vip_tier"
+        case noShowCount = "customer_no_show_count"
+        case arrivalStatus
+        case arrivalNote
+        case arrivalStatusBy
+        case cancellationReason
+        case cancellationNote
     }
+}
+
+extension Reservation {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(Int.self, forKey: .id)
+        uuid = try container.decode(String.self, forKey: .uuid)
+        reservationDate = try container.decode(String.self, forKey: .reservationDate)
+        startTime = try container.decode(String.self, forKey: .startTime)
+        endTime = try container.decode(String.self, forKey: .endTime)
+        guestCount = try container.decode(Int.self, forKey: .guestCount)
+        status = try container.decode(String.self, forKey: .status)
+        serviceStatus = try container.decodeIfPresent(String.self, forKey: .serviceStatus)
+        customerName = try container.decode(String.self, forKey: .customerName)
+        customerPhone = try container.decode(String.self, forKey: .customerPhone)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        tables = try container.decode([VenueTable].self, forKey: .tables)
+        checkedIn = try container.decode(Bool.self, forKey: .checkedIn)
+        updatedAt = try container.decode(String.self, forKey: .updatedAt)
+
+        // Ek alanlar hoşgörülü okunur: tip uyuşmazlığı listenin tamamını düşürmesin.
+        occasion = container.lenientString(forKey: .occasion)
+        guestPreferences = try? container.decodeIfPresent(ReservationGuestPreferences.self, forKey: .guestPreferences)
+        guestDetails = try? container.decodeIfPresent(ReservationGuestDetails.self, forKey: .guestDetails)
+        vipTier = container.lenientString(forKey: .vipTier)
+        noShowCount = container.lenientInt(forKey: .noShowCount)
+        arrivalStatus = container.lenientString(forKey: .arrivalStatus)
+        arrivalNote = container.lenientString(forKey: .arrivalNote)
+        arrivalStatusBy = container.lenientInt(forKey: .arrivalStatusBy)
+        cancellationReason = container.lenientString(forKey: .cancellationReason)
+        cancellationNote = container.lenientString(forKey: .cancellationNote)
+    }
+}
+
+/// Misafirin rezervasyonda seçtiği tercih anahtarları (`guestPreferences`).
+struct ReservationGuestPreferences: Codable, Hashable {
+    var dietary: [String] = []
+    var seating: [String] = []
+
+    init(dietary: [String] = [], seating: [String] = []) {
+        self.dietary = dietary
+        self.seating = seating
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        dietary = container.lenientStrings(forKey: .dietary)
+        seating = container.lenientStrings(forKey: .seating)
+    }
+}
+
+/// API'nin `guest_details` özeti: etiketler Türkçe ve mutfağa iletilecek alerjiler ayrıdır.
+struct ReservationGuestDetails: Codable, Hashable {
+    var occasion: String? = nil
+    var occasionLabel: String? = nil
+    var dietary: [String] = []
+    var seating: [String] = []
+    var allergies: [String] = []
+    var hasAllergy: Bool = false
+
+    enum CodingKeys: String, CodingKey {
+        case occasion, dietary, seating, allergies
+        case occasionLabel = "occasion_label"
+        case hasAllergy = "has_allergy"
+    }
+
+    init(
+        occasion: String? = nil,
+        occasionLabel: String? = nil,
+        dietary: [String] = [],
+        seating: [String] = [],
+        allergies: [String] = [],
+        hasAllergy: Bool = false
+    ) {
+        self.occasion = occasion
+        self.occasionLabel = occasionLabel
+        self.dietary = dietary
+        self.seating = seating
+        self.allergies = allergies
+        self.hasAllergy = hasAllergy
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        occasion = container.lenientString(forKey: .occasion)
+        occasionLabel = container.lenientString(forKey: .occasionLabel)
+        dietary = container.lenientStrings(forKey: .dietary)
+        seating = container.lenientStrings(forKey: .seating)
+        allergies = container.lenientStrings(forKey: .allergies)
+        hasAllergy = (try? container.decodeIfPresent(Bool.self, forKey: .hasAllergy)) ?? !allergies.isEmpty
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// Boş metin `nil` sayılır; metin olmayan değer yok sayılır.
+    func lenientString(forKey key: Key) -> String? {
+        guard let value = (try? decodeIfPresent(String.self, forKey: key)) ?? nil else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Sayı, ondalık veya sayısal metin kabul edilir.
+    func lenientInt(forKey key: Key) -> Int? {
+        if let value = (try? decodeIfPresent(Int.self, forKey: key)) ?? nil { return value }
+        if let value = (try? decodeIfPresent(Double.self, forKey: key)) ?? nil, value.isFinite { return Int(value) }
+        if let value = (try? decodeIfPresent(String.self, forKey: key)) ?? nil { return Int(value.trimmingCharacters(in: .whitespaces)) }
+        return nil
+    }
+
+    /// Metin dizisi; dizi değilse boş, metin olmayan elemanlar atlanır.
+    func lenientStrings(forKey key: Key) -> [String] {
+        if let values = (try? decodeIfPresent([String].self, forKey: key)) ?? nil {
+            return values.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        }
+        guard var nested = try? nestedUnkeyedContainer(forKey: key) else { return [] }
+        var result: [String] = []
+        while !nested.isAtEnd {
+            if let value = try? nested.decode(String.self) {
+                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty { result.append(trimmed) }
+            } else if (try? nested.decodeNil()) != true {
+                // Metin olmayan elemanı atla; atlanamazsa döngüden çık.
+                guard (try? nested.decode(LenientSkip.self)) != nil else { break }
+            }
+        }
+        return result
+    }
+}
+
+/// Dizideki tanımsız bir elemanı tüketmek için.
+private struct LenientSkip: Decodable {
+    init(from decoder: Decoder) throws {}
 }
 
 struct VenueTable: Codable, Identifiable, Hashable {
@@ -206,42 +369,21 @@ extension Reservation {
         return .later
     }
 
+    // Güncellemeler kopya üzerinden yapılır; misafir bağlamı (alerji, VIP, geliş teyidi) korunur.
     func updatingTables(_ updatedTables: [ReservationTableUpdate], updatedAt: String) -> Reservation {
-        Reservation(
-            id: id,
-            uuid: uuid,
-            reservationDate: reservationDate,
-            startTime: startTime,
-            endTime: endTime,
-            guestCount: guestCount,
-            status: status,
-            serviceStatus: serviceStatus,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            note: note,
-            tables: updatedTables.map { VenueTable(id: $0.id, name: $0.name ?? "Masa", capacity: $0.capacity, zone: nil, serviceStatus: nil) },
-            checkedIn: checkedIn,
-            updatedAt: updatedAt
-        )
+        var copy = self
+        copy.tables = updatedTables.map { VenueTable(id: $0.id, name: $0.name ?? "Masa", capacity: $0.capacity, zone: nil, serviceStatus: nil) }
+        copy.updatedAt = updatedAt
+        return copy
     }
 
     func updatingServiceStatus(_ update: ReservationServiceStatusUpdate) -> Reservation {
-        Reservation(
-            id: id,
-            uuid: uuid,
-            reservationDate: reservationDate,
-            startTime: startTime,
-            endTime: endTime,
-            guestCount: guestCount,
-            status: update.status,
-            serviceStatus: update.serviceStatus,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            note: note,
-            tables: tables,
-            checkedIn: update.checkedIn,
-            updatedAt: update.updatedAt
-        )
+        var copy = self
+        copy.status = update.status
+        copy.serviceStatus = update.serviceStatus
+        copy.checkedIn = update.checkedIn
+        copy.updatedAt = update.updatedAt
+        return copy
     }
 }
 
@@ -256,6 +398,8 @@ struct WalkInRequest: Codable {
     let note: String?
     let checkedIn: Bool
     let tableIDs: [Int]?
+    /// Kapı sırasından oturtuluyorsa sıra kaydı; sunucu kaydı ve sırayı tek işlemde kapatır.
+    var walkInQueueEntryID: Int? = nil
 
     enum CodingKeys: String, CodingKey {
         case customerName = "customer_name"
@@ -266,6 +410,7 @@ struct WalkInRequest: Codable {
         case note
         case checkedIn = "checked_in"
         case tableIDs = "table_ids"
+        case walkInQueueEntryID = "walk_in_queue_entry_id"
     }
 }
 
@@ -314,10 +459,60 @@ struct ReservationUpdateRequest: Codable {
 struct ReservationStatusRequest: Encodable {
     let status: String
     let expectedUpdatedAt: String
+    /// Yalnızca iptalde: neden kodu ve isteğe bağlı not (`other` için not zorunlu). Boşsa gönderilmez.
+    var cancellationReason: String? = nil
+    var cancellationNote: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case status
         case expectedUpdatedAt = "expected_updated_at"
+        case cancellationReason = "cancellation_reason"
+        case cancellationNote = "cancellation_note"
+    }
+}
+
+/// API ile aynı iptal nedenleri (`api.masaport/src/utils/reservationCancellation.js`).
+enum ReservationCancellationReason: String, CaseIterable, Identifiable {
+    case guestRequest = "guest_request"
+    case guestNoContact = "guest_no_contact"
+    case duplicate
+    case venueClosed = "venue_closed"
+    case capacityIssue = "capacity_issue"
+    case weather
+    case paymentIssue = "payment_issue"
+    case other
+
+    static let noteMaxLength = 500
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .guestRequest: "Misafir isteği"
+        case .guestNoContact: "Misafire ulaşılamadı"
+        case .duplicate: "Mükerrer kayıt"
+        case .venueClosed: "Mekân kapalı"
+        case .capacityIssue: "Kapasite sorunu"
+        case .weather: "Hava koşulları"
+        case .paymentIssue: "Ödeme sorunu"
+        case .other: "Diğer"
+        }
+    }
+
+    /// "Diğer" seçildiğinde kısa açıklama zorunludur.
+    var requiresNote: Bool { self == .other }
+
+    /// Not kuralı API ile aynı: en fazla 500 karakter, "Diğer"de en az 3 karakter.
+    func accepts(note: String) -> Bool {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.count <= Self.noteMaxLength && (!requiresNote || trimmed.count >= 3)
+    }
+}
+
+extension Reservation {
+    /// Kayıtlı iptal nedeninin etiketi; bilinmeyen kod gösterilmez.
+    var cancellationReasonTitle: String? {
+        cancellationReason.flatMap { ReservationCancellationReason(rawValue: $0.lowercased())?.title }
     }
 }
 
@@ -345,41 +540,22 @@ struct WaitlistStatusUpdateRequest: Encodable {
 
 extension Reservation {
     func updating(status: String, updatedAt: String) -> Reservation {
-        Reservation(
-            id: id,
-            uuid: uuid,
-            reservationDate: reservationDate,
-            startTime: startTime,
-            endTime: endTime,
-            guestCount: guestCount,
-            status: status,
-            serviceStatus: serviceStatus,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            note: note,
-            tables: tables,
-            checkedIn: checkedIn,
-            updatedAt: updatedAt
-        )
+        var copy = self
+        copy.status = status
+        copy.updatedAt = updatedAt
+        return copy
     }
 
     func updating(customerName: String, customerPhone: String, guestCount: Int, note: String?, startTime newStart: String? = nil, endTime newEnd: String? = nil, updatedAt: String) -> Reservation {
-        Reservation(
-            id: id,
-            uuid: uuid,
-            reservationDate: reservationDate,
-            startTime: newStart ?? startTime,
-            endTime: newEnd ?? endTime,
-            guestCount: guestCount,
-            status: status,
-            serviceStatus: serviceStatus,
-            customerName: customerName,
-            customerPhone: customerPhone,
-            note: note,
-            tables: tables,
-            checkedIn: checkedIn,
-            updatedAt: updatedAt
-        )
+        var copy = self
+        copy.customerName = customerName
+        copy.customerPhone = customerPhone
+        copy.guestCount = guestCount
+        copy.note = note
+        copy.startTime = newStart ?? startTime
+        copy.endTime = newEnd ?? endTime
+        copy.updatedAt = updatedAt
+        return copy
     }
 
     var isPending: Bool { status.uppercased() == "PENDING" }
@@ -491,4 +667,7 @@ enum ServiceAction: String, CaseIterable, Identifiable {
         case .left: "Misafir kalktı olarak işaretlenecek, rezervasyon tamamlanacak ve masa boşalacak."
         }
     }
+
+    /// Kalktı adımında hesap tutarı sorulur (isteğe bağlı).
+    var asksForBillAmount: Bool { self == .left }
 }

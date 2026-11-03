@@ -25,6 +25,8 @@ struct ReservationRow: View {
             }
         }()
 
+        let insights = reservation.insights
+
         HStack(alignment: .center, spacing: 12) {
             MPTimeBlock(time: reservation.shortTime, caption: reservation.guestText, tone: timeTone)
 
@@ -53,6 +55,9 @@ struct ReservationRow: View {
                             .accessibilityLabel("Not var")
                     }
                 }
+                if !insights.isEmpty {
+                    ReservationInsightTags(insights: insights)
+                }
             }
 
             Spacer(minLength: 6)
@@ -79,7 +84,8 @@ struct ReservationRow: View {
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(
-            "\(reservation.shortTime), \(reservation.guestText), \(reservation.displayName), \(reservation.tableSummary), \(status.text)"
+            ([reservation.shortTime, reservation.guestText, reservation.displayName, reservation.tableSummary, status.text]
+                + insights.map(\.spokenText)).joined(separator: ", ")
         )
     }
 }

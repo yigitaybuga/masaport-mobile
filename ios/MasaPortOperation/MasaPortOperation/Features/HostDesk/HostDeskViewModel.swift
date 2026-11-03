@@ -13,10 +13,13 @@ struct TableAssignmentUpdateRequest: Encodable {
 struct ServiceStatusUpdateRequest: Encodable {
     let serviceStatus: String
     let expectedUpdatedAt: String
+    /// Yalnızca Kalktı'da; ön ödeme dahil toplam hesap, "2500.50" biçiminde (TRY). Boşsa gönderilmez.
+    var billAmount: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case serviceStatus = "service_status"
         case expectedUpdatedAt = "expected_updated_at"
+        case billAmount = "bill_amount"
     }
 }
 
@@ -30,6 +33,8 @@ enum CheckInOutcome: Equatable {
 final class HostDeskViewModel: ObservableObject {
     @Published private(set) var reservations: [Reservation] = []
     @Published private(set) var tables: [VenueTable] = []
+    /// Bugünün kapı sırası (aktif kayıtlar); yüklenemezse Host Masası'nın geri kalanı etkilenmez.
+    @Published private(set) var walkInQueue: [WalkInQueueEntry] = []
     @Published private(set) var isLoading = false
     @Published private(set) var checkingInReservationID: Int?
     @Published private(set) var errorMessage: String?
@@ -58,10 +63,13 @@ final class HostDeskViewModel: ObservableObject {
                 "/reservations/\(venueID)?date=\(OperationDate.apiString(date))&per_page=250&sort_by=startTime&sort_order=asc"
             )
             async let loadedTables: [VenueTable] = api.get("/tables/\(venueID)")
+            async let loadedQueue = activeWalkInQueue(venueID: venueID, isToday: OperationDate.isToday(date))
             let loaded = try await (loadedReservations, loadedTables)
+            let queue = await loadedQueue
             // Gün veya mekan değiştiyse geç dönen eski yanıt yeni listenin üzerine yazılmaz.
             guard loadGate.isCurrent(generation) else { return }
             (reservations, tables) = loaded
+            if let queue { walkInQueue = queue }
             errorMessage = nil
         } catch let error as APIError {
             guard loadGate.isCurrent(generation) else { return }
@@ -98,7 +106,15 @@ final class HostDeskViewModel: ObservableObject {
         }
     }
 
-    func updateServiceStatus(_ reservation: Reservation, to action: ServiceAction, venueID: Int, date: Date = .now) async -> Bool {
+    /// Kapı sırası yalnızca bugün için gösterilir; hata (yetki, eski sunucu) Host Masası'nı bozmaz, son liste korunur.
+    private func activeWalkInQueue(venueID: Int, isToday: Bool) async -> [WalkInQueueEntry]? {
+        guard isToday else { return [] }
+        let snapshot: WalkInQueueSnapshot? = try? await api.get("/walk-in-queue/\(venueID)")
+        return snapshot?.active
+    }
+
+    /// `billAmount`: yalnızca Kalktı için, `BillAmountInput.normalized` çıktısı ("2500.50").
+    func updateServiceStatus(_ reservation: Reservation, to action: ServiceAction, billAmount: String? = nil, venueID: Int, date: Date = .now) async -> Bool {
         checkingInReservationID = reservation.id
         errorMessage = nil
         defer { checkingInReservationID = nil }
@@ -106,7 +122,11 @@ final class HostDeskViewModel: ObservableObject {
         do {
             let _: ReservationServiceStatusUpdate = try await api.put(
                 "/reservations/\(venueID)/\(reservation.id)/service-status",
-                body: ServiceStatusUpdateRequest(serviceStatus: action.rawValue, expectedUpdatedAt: reservation.updatedAt)
+                body: ServiceStatusUpdateRequest(
+                    serviceStatus: action.rawValue,
+                    expectedUpdatedAt: reservation.updatedAt,
+                    billAmount: action.asksForBillAmount ? billAmount : nil
+                )
             )
             await load(venueID: venueID, date: date)
             return true

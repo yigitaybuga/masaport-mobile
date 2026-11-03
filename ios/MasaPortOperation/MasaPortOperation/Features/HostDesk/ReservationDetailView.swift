@@ -10,16 +10,6 @@ private struct TableAssignmentRequest: Encodable {
     }
 }
 
-private struct ServiceStatusRequest: Encodable {
-    let serviceStatus: String
-    let expectedUpdatedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case serviceStatus = "service_status"
-        case expectedUpdatedAt = "expected_updated_at"
-    }
-}
-
 @MainActor
 final class ReservationDetailViewModel: ObservableObject {
     @Published private(set) var reservation: Reservation
@@ -162,21 +152,36 @@ final class ReservationDetailViewModel: ObservableObject {
         }
     }
 
-    func updateStatus(_ status: String) async -> Bool {
+    /// İptalde neden kodu ve isteğe bağlı not aynı istekle gönderilir.
+    func updateStatus(_ status: String, cancellationReason: ReservationCancellationReason? = nil, cancellationNote: String? = nil) async -> Bool {
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
 
         guard await ensureCurrentVersion() else { return false }
 
+        let trimmedNote: String? = {
+            let value = (cancellationNote ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.isEmpty ? nil : value
+        }()
         do {
             let _: EmptyResponse = try await api.put(
                 "/reservations/\(venueID)/\(reservation.id)/status",
-                body: ReservationStatusRequest(status: status, expectedUpdatedAt: reservation.updatedAt)
+                body: ReservationStatusRequest(
+                    status: status,
+                    expectedUpdatedAt: reservation.updatedAt,
+                    cancellationReason: cancellationReason?.rawValue,
+                    cancellationNote: cancellationReason == nil ? nil : trimmedNote
+                )
             )
             // Yanıt `updated_at` taşımaz; sunucu masa/servis durumunu da değiştirebilir. Kaydın tamamını yeniden çek.
             if !(await reloadFromServer()) {
-                reservation = reservation.updating(status: status.uppercased(), updatedAt: reservation.updatedAt)
+                var updated = reservation.updating(status: status.uppercased(), updatedAt: reservation.updatedAt)
+                if let cancellationReason {
+                    updated.cancellationReason = cancellationReason.rawValue
+                    updated.cancellationNote = trimmedNote
+                }
+                reservation = updated
             }
             return true
         } catch let error as APIError {
@@ -219,7 +224,8 @@ final class ReservationDetailViewModel: ObservableObject {
         }
     }
 
-    func updateServiceStatus(_ serviceStatus: String) async -> Bool {
+    /// `billAmount`: yalnızca Kalktı (LEFT) için, `BillAmountInput` ile normalize edilmiş tutar.
+    func updateServiceStatus(_ serviceStatus: String, billAmount: String? = nil) async -> Bool {
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
@@ -228,9 +234,10 @@ final class ReservationDetailViewModel: ObservableObject {
         do {
             let result: ReservationServiceStatusUpdate = try await api.put(
                 "/reservations/\(venueID)/\(reservation.id)/service-status",
-                body: ServiceStatusRequest(
+                body: ServiceStatusUpdateRequest(
                     serviceStatus: serviceStatus,
-                    expectedUpdatedAt: reservation.updatedAt
+                    expectedUpdatedAt: reservation.updatedAt,
+                    billAmount: serviceStatus == ServiceAction.left.rawValue ? billAmount : nil
                 )
             )
             reservation = reservation.updatingServiceStatus(result)
@@ -255,6 +262,10 @@ struct ReservationDetailView: View {
     @State private var statusAction: StatusAction?
     @State private var showsNoShowSheet = false
     @State private var showsEditSheet = false
+    @State private var showsCloseSheet = false
+    @State private var showsCancelSheet = false
+    /// Sayfa kapanırken uyarı açılmaya çalışılmasın; mesaj sayfa kapandıktan sonra gösterilir.
+    @State private var pendingCompletionMessage: String?
 
     init(reservation: Reservation, venueID: Int) {
         _model = StateObject(wrappedValue: ReservationDetailViewModel(reservation: reservation, venueID: venueID))
@@ -268,6 +279,8 @@ struct ReservationDetailView: View {
                 if let errorMessage = model.errorMessage {
                     MPNotice(message: errorMessage)
                 }
+
+                ReservationGuestInsightCard(reservation: model.reservation)
 
                 if let note = model.reservation.note,
                    !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -378,6 +391,33 @@ struct ReservationDetailView: View {
         } message: {
             Text(statusAction?.message(for: model.reservation) ?? "")
         }
+        .sheet(isPresented: $showsCloseSheet, onDismiss: {
+            if let message = pendingCompletionMessage {
+                pendingCompletionMessage = nil
+                completionMessage = message
+            }
+        }) {
+            ServiceCloseSheet(reservation: model.reservation) { amount in
+                if await model.updateServiceStatus(ServiceAction.left.rawValue, billAmount: amount) {
+                    pendingCompletionMessage = amount == nil
+                        ? "Servis tamamlandı; masa boşaldı."
+                        : "Servis tamamlandı; hesap tutarı kaydedildi."
+                    feedbackTrigger += 1
+                    return nil
+                }
+                return model.errorMessage ?? "Servis durumu güncellenemedi. Tekrar deneyin."
+            }
+        }
+        .sheet(isPresented: $showsCancelSheet) {
+            CancellationReasonSheet(guestName: model.reservation.displayName, timeText: model.reservation.shortTime) { reason, note in
+                Task {
+                    if await model.updateStatus("CANCELLED", cancellationReason: reason, cancellationNote: note) {
+                        completionMessage = "Rezervasyon iptal edildi; masa serbest bırakıldı."
+                        feedbackTrigger += 1
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showsNoShowSheet) {
             NoShowReasonSheet(guestName: model.reservation.displayName) { reason in
                 Task {
@@ -408,8 +448,18 @@ struct ReservationDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(Color(.secondaryLabel))
                     }
-                    MPPill(text: status.text, tone: status.tone)
-                        .padding(.top, 2)
+                    InsightFlowLayout(spacing: 6, lineSpacing: 6) {
+                        MPPill(text: status.text, tone: status.tone)
+                        if let arrival = reservation.arrivalIndicator {
+                            MPPill(text: arrival.text, tone: arrival.tone, systemImage: arrival.systemImage)
+                                .accessibilityLabel(arrival.spokenText)
+                        }
+                        if let vip = reservation.vipLevel {
+                            MPPill(text: vip.title, tone: .brand, systemImage: "star.fill")
+                                .accessibilityLabel(vip.longTitle)
+                        }
+                    }
+                    .padding(.top, 2)
                 }
                 Spacer(minLength: 0)
             }
@@ -632,7 +682,11 @@ struct ReservationDetailView: View {
         let rowHeight: CGFloat = 52
 
         return Button {
-            confirmation = action
+            if action.asksForBillAmount {
+                showsCloseSheet = true
+            } else {
+                confirmation = action
+            }
         } label: {
             HStack(spacing: 14) {
                 ZStack {
@@ -709,7 +763,7 @@ struct ReservationDetailView: View {
                     }
                     .buttonStyle(MPSecondaryButtonStyle(tone: .attention))
                     Button {
-                        statusAction = .cancel
+                        showsCancelSheet = true
                     } label: {
                         Label("İptal et", systemImage: "xmark.circle.fill")
                             .frame(maxWidth: .infinity)
@@ -733,7 +787,14 @@ struct ReservationDetailView: View {
         let tone: MPTone = status == "COMPLETED" ? .positive : .critical
         let symbol = status == "COMPLETED" ? "checkmark.circle.fill" : (status == "NO_SHOW" ? "person.fill.xmark" : "xmark.circle.fill")
         let title = status == "COMPLETED" ? "Servis tamamlandı" : (status == "NO_SHOW" ? "Misafir gelmedi" : "Rezervasyon iptal edildi")
-        let detail = status == "COMPLETED" ? "Bu kayıt için başka işlem gerekmiyor." : "Masa serbest bırakıldı; kayıt raporlarda görünmeye devam eder."
+        let detail: String = {
+            if status == "COMPLETED" { return "Bu kayıt için başka işlem gerekmiyor." }
+            if status == "CANCELLED", let reason = model.reservation.cancellationReasonTitle {
+                let note = model.reservation.cancellationNote.map { " · \($0)" } ?? ""
+                return "İptal nedeni: \(reason)\(note)"
+            }
+            return "Masa serbest bırakıldı; kayıt raporlarda görünmeye devam eder."
+        }()
         return HStack(spacing: 12) {
             MPIconTile(systemImage: symbol, tone: tone, size: 36)
             VStack(alignment: .leading, spacing: 3) {
@@ -812,40 +873,117 @@ private extension AssignableTable {
     }
 }
 
+/// Onay diyaloğuyla ilerleyen durum değişikliği; iptal neden seçimi için ayrı sayfa kullanır.
 private enum StatusAction: String {
     case confirm = "CONFIRMED"
-    case cancel = "CANCELLED"
 
-    var title: String {
-        switch self {
-        case .confirm: "Rezervasyon onaylansın mı?"
-        case .cancel: "Rezervasyon iptal edilsin mi?"
-        }
-    }
-
-    var confirmTitle: String {
-        switch self {
-        case .confirm: "Onayla"
-        case .cancel: "İptal et"
-        }
-    }
-
-    var isDestructive: Bool { self == .cancel }
-
-    var completionMessage: String {
-        switch self {
-        case .confirm: "Rezervasyon onaylandı; misafire bildirim gönderildi."
-        case .cancel: "Rezervasyon iptal edildi; masa serbest bırakıldı."
-        }
-    }
+    var title: String { "Rezervasyon onaylansın mı?" }
+    var confirmTitle: String { "Onayla" }
+    var isDestructive: Bool { false }
+    var completionMessage: String { "Rezervasyon onaylandı; misafire bildirim gönderildi." }
 
     func message(for reservation: Reservation) -> String {
-        switch self {
-        case .confirm:
-            "\(reservation.displayName) için \(reservation.shortTime) saatindeki \(reservation.guestText) rezervasyon onaylanacak."
-        case .cancel:
-            "\(reservation.displayName) için \(reservation.shortTime) saatindeki rezervasyon iptal edilecek ve misafire bildirim gidecek."
+        "\(reservation.displayName) için \(reservation.shortTime) saatindeki \(reservation.guestText) rezervasyon onaylanacak."
+    }
+}
+
+/// İptal nedeni seçimi; "Diğer" kısa açıklama ister. Neden ve not aynı durum isteğiyle gönderilir.
+private struct CancellationReasonSheet: View {
+    let guestName: String
+    let timeText: String
+    let onConfirm: (ReservationCancellationReason, String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var reason: ReservationCancellationReason?
+    @State private var note = ""
+    @FocusState private var isFocused: Bool
+
+    private var trimmedNote: String { note.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canConfirm: Bool { reason.map { $0.accepts(note: note) } ?? false }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("\(guestName) için \(timeText) saatindeki rezervasyon iptal edilecek ve misafire bildirim gidecek. Neden raporlara işlenir.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color(.secondaryLabel))
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(ReservationCancellationReason.allCases) { item in
+                            Button {
+                                withAnimation(.snappy(duration: 0.18)) { reason = item }
+                                if item.requiresNote { isFocused = true }
+                            } label: {
+                                HStack {
+                                    Text(item.title)
+                                        .font(.subheadline.weight(reason == item ? .semibold : .regular))
+                                        .foregroundStyle(Color(.label))
+                                    Spacer()
+                                    if reason == item {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(MP.brand)
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .frame(height: 46)
+                                .background(reason == item ? MP.brand.opacity(0.12) : MP.fill, in: RoundedRectangle(cornerRadius: MP.radiusSmall, style: .continuous))
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(reason == item ? .isSelected : [])
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        TextField(reason?.requiresNote == true ? "Kısa açıklama yazın" : "Not (isteğe bağlı)", text: $note, axis: .vertical)
+                            .lineLimit(2...4)
+                            .focused($isFocused)
+                            .mpCard(padding: 14)
+                            .onChange(of: note) { _, newValue in
+                                if newValue.count > ReservationCancellationReason.noteMaxLength {
+                                    note = String(newValue.prefix(ReservationCancellationReason.noteMaxLength))
+                                }
+                            }
+                        if reason?.requiresNote == true && trimmedNote.count < 3 {
+                            Text("\u{201C}Diğer\u{201D} seçildiğinde kısa bir açıklama yazın.")
+                                .font(.caption)
+                                .foregroundStyle(Color(.secondaryLabel))
+                                .padding(.horizontal, 4)
+                        }
+                    }
+                }
+                .padding(.horizontal, MP.gutter)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(MP.background)
+            .navigationTitle("Rezervasyonu iptal et")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Vazgeç") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    guard let reason, canConfirm else { return }
+                    onConfirm(reason, trimmedNote)
+                    dismiss()
+                } label: {
+                    Label("Rezervasyonu iptal et", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(MPPrimaryButtonStyle(tone: .critical))
+                .disabled(!canConfirm)
+                .opacity(canConfirm ? 1 : 0.5)
+                .padding(.horizontal, MP.gutter)
+                .padding(.vertical, 10)
+                .background(.bar)
+            }
         }
+        .presentationDetents([.large])
     }
 }
 

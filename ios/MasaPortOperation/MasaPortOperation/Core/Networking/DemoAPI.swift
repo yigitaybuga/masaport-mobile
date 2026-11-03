@@ -68,6 +68,7 @@ final class DemoStore {
     private var reservations: [Reservation]
     private var tables: [VenueTable]
     private var waitlist: [WaitlistEntry]
+    private var walkInQueue: [WalkInQueueEntry] = []
     private var events: [DemoEvent] = []
     private var eventReservations: [EventReservation] = [] {
         didSet { eventReservationsSnapshot = eventReservations }
@@ -209,6 +210,24 @@ final class DemoStore {
             eventReservation(608, instance: brunch, name: "Umut Sezer", phone: "+90 558 800 90 00", guests: ["Umut Sezer", "Melis Sezer"], payment: "PAID", checkedIn: true)
         ]
         eventReservationsSnapshot = eventReservations
+        walkInQueue = [
+            WalkInQueueEntry(
+                id: 901, uuid: "demo-queue-901", customerName: "Arda Tekin", customerPhone: "+90 545 111 22 33",
+                partySize: 3, quotedWaitMinutes: 15, note: "Bahçe istiyor", status: "WAITING",
+                createdAt: iso.string(from: now.addingTimeInterval(-22 * 60))
+            ),
+            WalkInQueueEntry(
+                id: 902, uuid: "demo-queue-902", customerName: "Ece Sarı", customerPhone: "+90 546 222 33 44",
+                customerEmail: "ece@example.com", partySize: 2, quotedWaitMinutes: 20, status: "NOTIFIED",
+                notifiedAt: iso.string(from: now.addingTimeInterval(-2 * 60)),
+                createdAt: iso.string(from: now.addingTimeInterval(-12 * 60))
+            ),
+            WalkInQueueEntry(
+                id: 903, uuid: "demo-queue-903", customerName: "Murat", partySize: 5, quotedWaitMinutes: 25,
+                status: "WAITING", createdAt: iso.string(from: now.addingTimeInterval(-4 * 60))
+            )
+        ]
+        Self.applyGuestContext(to: &reservations)
         syncTableStates()
     }
 
@@ -303,6 +322,9 @@ final class DemoStore {
         }
         if method == "PUT", count == 4, part(0) == "reservations", part(3) == "service-status" {
             return updateServiceStatus(reservationID: Int(part(2)) ?? 0, body: body)
+        }
+        if part(0) == "walk-in-queue" {
+            return respondWalkInQueue(method: method, parts: parts, body: body)
         }
         if method == "POST", count == 5, part(0) == "waitlist", part(2) == "entry", part(4) == "offer" {
             return offer(entryID: Int(part(3)) ?? 0)
@@ -468,11 +490,21 @@ final class DemoStore {
     private func updateServiceStatus(reservationID: Int, body: Data) -> (Int, Data) {
         struct Request: Decodable {
             let serviceStatus: String
-            enum CodingKeys: String, CodingKey { case serviceStatus = "service_status" }
+            let billAmount: String?
+            enum CodingKeys: String, CodingKey {
+                case serviceStatus = "service_status"
+                case billAmount = "bill_amount"
+            }
         }
         guard let index = reservations.firstIndex(where: { $0.id == reservationID }),
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz servis durumu.")
+        }
+        // API ile aynı kural: tutar yalnızca Kalktı'da, en fazla 8 basamak ve 2 ondalıkla.
+        if let billAmount = request.billAmount {
+            guard request.serviceStatus.uppercased() == "LEFT", case .valid(let normalized) = BillAmountInput.parse(billAmount), normalized == billAmount else {
+                return fail(400, "Hesap tutarı 0–99.999.999,99 TL arasında olmalı; güncel servis kaydı gerekli.")
+            }
         }
         let rawService = request.serviceStatus.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let legacyStatusMap = [
@@ -571,6 +603,13 @@ final class DemoStore {
             formatter.dateFormat = "yyyy-MM-dd HH:mm"
             return formatter.date(from: "\(today) \(time)") ?? Date()
         }()
+        if let entryID = request.walkInQueueEntryID {
+            guard let entryIndex = walkInQueue.firstIndex(where: { $0.id == entryID && $0.isActive }) else {
+                return fail(409, "Bu misafir artık sırada değil.", code: "WALK_IN_CLOSED")
+            }
+            walkInQueue[entryIndex].status = "SEATED"
+            walkInQueue[entryIndex].closedAt = Self.nowString()
+        }
         let id = (reservations.map(\.id).max() ?? 100) + 1
         let base = Self.reservation(
             id: id, start: start, guests: request.guestCount, name: request.customerName, phone: request.customerPhone,
@@ -578,12 +617,8 @@ final class DemoStore {
             checkedIn: request.checkedIn, note: request.note
         )
         let duration = TimeInterval((request.durationMinutes ?? 90) * 60)
-        let created = Reservation(
-            id: base.id, uuid: base.uuid, reservationDate: base.reservationDate, startTime: base.startTime,
-            endTime: Self.timeString(start.addingTimeInterval(duration)), guestCount: base.guestCount, status: base.status,
-            serviceStatus: base.serviceStatus, customerName: base.customerName, customerPhone: base.customerPhone,
-            note: base.note, tables: base.tables, checkedIn: base.checkedIn, updatedAt: base.updatedAt
-        )
+        var created = base
+        created.endTime = Self.timeString(start.addingTimeInterval(duration))
         reservations.append(created)
         syncTableStates()
         return (201, (try? encoder.encode(Envelope(success: true, data: WalkInResult(
@@ -627,13 +662,40 @@ final class DemoStore {
     }
 
     private func updateStatus(reservationID: Int, body: Data) -> (Int, Data) {
-        struct Request: Decodable { let status: String }
+        struct Request: Decodable {
+            let status: String
+            let cancellationReason: String?
+            let cancellationNote: String?
+            enum CodingKeys: String, CodingKey {
+                case status
+                case cancellationReason = "cancellation_reason"
+                case cancellationNote = "cancellation_note"
+            }
+        }
         guard let index = reservations.firstIndex(where: { $0.id == reservationID }),
               let request = try? decoder.decode(Request.self, from: body) else {
             return fail(400, "Geçersiz durum isteği.")
         }
+        // API ile aynı: mobil istemci neden göndermeyebilir; gönderdiyse doğrulanır.
+        let isCancel = request.status.uppercased() == "CANCELLED"
+        var reason: ReservationCancellationReason?
+        if isCancel, let code = request.cancellationReason {
+            guard let parsed = ReservationCancellationReason(rawValue: code.lowercased()) else {
+                return fail(400, "Geçerli bir iptal nedeni seçin.", code: "INVALID_CANCELLATION_REASON")
+            }
+            guard parsed.accepts(note: request.cancellationNote ?? "") else {
+                return fail(400, "\u{201C}Diğer\u{201D} seçildiğinde kısa bir açıklama yazın.", code: "CANCELLATION_NOTE_REQUIRED")
+            }
+            reason = parsed
+        }
         if let conflict = versionConflict(body, current: reservations[index]) { return conflict }
-        reservations[index] = reservations[index].updating(status: request.status.uppercased(), updatedAt: Self.nowString())
+        var updated = reservations[index].updating(status: request.status.uppercased(), updatedAt: Self.nowString())
+        if isCancel {
+            let note = (request.cancellationNote ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            updated.cancellationReason = reason?.rawValue
+            updated.cancellationNote = note.isEmpty ? nil : note
+        }
+        reservations[index] = updated
         syncTableStates()
         return ok(EmptyResponse())
     }
@@ -689,6 +751,102 @@ final class DemoStore {
             waitlist.remove(at: index)
         }
         return ok(WaitlistStatusPayload(id: entryID, status: request.status))
+    }
+
+    // MARK: Walk-in queue
+
+    private func respondWalkInQueue(method: String, parts: [String], body: Data) -> (Int, Data) {
+        // /walk-in-queue/:venueId[/:id/(notify|seat|close)]
+        let entryID = parts.count >= 3 ? Int(parts[2]) : nil
+        let action = parts.count >= 4 ? parts[3] : ""
+        switch (method, parts.count, action) {
+        case ("GET", 2, _):
+            return ok(walkInQueueSnapshot())
+        case ("POST", 2, _):
+            return addToWalkInQueue(body: body)
+        case ("POST", 4, "notify"):
+            guard let index = activeWalkInQueueIndex(entryID) else { return walkInClosed() }
+            walkInQueue[index].status = "NOTIFIED"
+            walkInQueue[index].notifiedAt = Self.nowString()
+            let entry = positioned(walkInQueue[index])
+            let skipped = WalkInQueueDelivery(status: "SKIPPED", reason: "Demo modunda mesaj gönderilmez.")
+            return ok(WalkInQueueNotifyResult(
+                entry: entry,
+                delivery: entry.customerPhone == nil ? WalkInQueueDelivery(status: "SKIPPED", reason: "Telefon yok.") : skipped,
+                emailDelivery: entry.customerEmail == nil ? nil : skipped
+            ))
+        case ("POST", 4, "seat"):
+            guard let index = activeWalkInQueueIndex(entryID) else { return walkInClosed() }
+            walkInQueue[index].status = "SEATED"
+            walkInQueue[index].closedAt = Self.nowString()
+            return ok(walkInQueue[index])
+        case ("POST", 4, "close"):
+            let status = (try? decoder.decode(WalkInQueueCloseRequest.self, from: body))?.status ?? ""
+            guard ["LEFT", "CANCELLED"].contains(status) else { return fail(400, "Geçersiz durum.", code: "INVALID_STATUS") }
+            guard let index = walkInQueue.firstIndex(where: { $0.id == entryID }) else {
+                return fail(404, "Sıra kaydı bulunamadı.", code: "WALK_IN_NOT_FOUND")
+            }
+            if walkInQueue[index].isActive {
+                walkInQueue[index].status = status
+                walkInQueue[index].closedAt = Self.nowString()
+            }
+            return ok(walkInQueue[index])
+        default:
+            return fail(404, "Demo modunda tanımlı olmayan uç nokta: \(method) /\(parts.joined(separator: "/"))")
+        }
+    }
+
+    private func addToWalkInQueue(body: Data) -> (Int, Data) {
+        guard let request = try? decoder.decode(WalkInQueueCreateRequest.self, from: body) else {
+            return fail(400, "Geçersiz sıra isteği.")
+        }
+        let name = request.customerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.count >= 2 else { return fail(400, "Misafir adını yazın.", code: "INVALID_NAME") }
+        guard (1...100).contains(request.partySize) else { return fail(400, "Kişi sayısı 1–100 arasında olmalı.", code: "INVALID_PARTY_SIZE") }
+        let snapshot = walkInQueueSnapshot()
+        let entry = WalkInQueueEntry(
+            id: (walkInQueue.map(\.id).max() ?? 900) + 1,
+            uuid: UUID().uuidString.lowercased(),
+            customerName: name,
+            customerPhone: request.customerPhone,
+            customerEmail: request.customerEmail,
+            partySize: request.partySize,
+            quotedWaitMinutes: request.quotedWaitMinutes.map { min(max($0, 1), 240) } ?? (snapshot.suggestedQuoteMinutes ?? 15),
+            note: request.note,
+            status: "WAITING",
+            createdAt: Self.nowString()
+        )
+        walkInQueue.append(entry)
+        let delivery = request.sendLink && request.customerPhone != nil
+            ? WalkInQueueDelivery(status: "SKIPPED", reason: "Demo modunda mesaj gönderilmez.")
+            : nil
+        return (201, (try? encoder.encode(Envelope(success: true, data: WalkInQueueCreateResult(entry: positioned(entry), delivery: delivery), error: nil))) ?? Data())
+    }
+
+    private func walkInQueueSnapshot() -> WalkInQueueSnapshot {
+        let active = walkInQueue.filter(\.isActive).map(positioned)
+        return WalkInQueueSnapshot(
+            active: active,
+            recent: walkInQueue.filter { !$0.isActive },
+            minutesPerParty: 10,
+            suggestedQuoteMinutes: max(5, (active.count + 1) * 10)
+        )
+    }
+
+    /// Sıra numarası aktif kayıtlar arasında katılma sırasıdır.
+    private func positioned(_ entry: WalkInQueueEntry) -> WalkInQueueEntry {
+        var copy = entry
+        copy.position = walkInQueue.filter(\.isActive).firstIndex { $0.id == entry.id }.map { $0 + 1 }
+        copy.waitedMinutes = entry.waitedMinutes(at: Date())
+        return copy
+    }
+
+    private func activeWalkInQueueIndex(_ id: Int?) -> Int? {
+        walkInQueue.firstIndex { $0.id == id && $0.isActive }
+    }
+
+    private func walkInClosed() -> (Int, Data) {
+        fail(409, "Bu misafir artık sırada değil.", code: "WALK_IN_CLOSED")
     }
 
     // MARK: Optimistic concurrency
@@ -780,6 +938,35 @@ final class DemoStore {
             checkedIn: checkedIn,
             updatedAt: nowString()
         )
+    }
+
+    /// Satır rozetlerini ve detay kartını denemek için örnek misafir bağlamı (API `guest_details` biçiminde).
+    private static func applyGuestContext(to reservations: inout [Reservation]) {
+        for index in reservations.indices {
+            var reservation = reservations[index]
+            switch reservation.id {
+            case 101:
+                reservation.arrivalStatus = "LATE"
+                reservation.arrivalNote = "Misafir geliş teyidi: 15 dakika gecikeceğim. (\(reservation.reservationDate) \(reservation.shortTime))"
+            case 104:
+                reservation.guestPreferences = ReservationGuestPreferences(dietary: ["vegan", "nut_allergy"], seating: ["window"])
+                reservation.guestDetails = ReservationGuestDetails(dietary: ["Vegan", "Kuruyemiş alerjisi"], seating: ["Pencere kenarı"], allergies: ["Kuruyemiş alerjisi"], hasAllergy: true)
+                reservation.vipTier = "GOLD"
+            case 105:
+                reservation.occasion = "birthday"
+                reservation.guestDetails = ReservationGuestDetails(occasion: "birthday", occasionLabel: "Doğum günü")
+                reservation.vipTier = "PLATINUM"
+            case 106:
+                reservation.arrivalStatus = "NOTIFIED"
+                reservation.arrivalNote = "Misafir geliş teyidi: Geliyorum. (\(reservation.reservationDate) \(reservation.shortTime))"
+            case 108:
+                reservation.noShowCount = 2
+                reservation.guestDetails = ReservationGuestDetails(dietary: ["Glütensiz"], allergies: ["Glütensiz"], hasAllergy: true)
+            default:
+                continue
+            }
+            reservations[index] = reservation
+        }
     }
 
     private static func timeString(_ date: Date) -> String {

@@ -18,9 +18,12 @@ final class WalkInViewModel: ObservableObject {
     @Published private(set) var result: WalkInResult?
 
     private let api: APIClient
+    /// Kapı sırasından oturtuluyorsa sıra kaydı; walk-in isteğiyle birlikte gönderilir.
+    private let queueEntryID: Int?
 
     init(api: APIClient = .shared, prefill: WalkInPrefill? = nil) {
         self.api = api
+        queueEntryID = prefill?.queueEntryID
         // Şu anki saati 5 dakikaya yuvarla.
         let now = Date()
         let seconds = Int(now.timeIntervalSince1970)
@@ -80,7 +83,8 @@ final class WalkInViewModel: ObservableObject {
                     durationMinutes: durationMinutes,
                     note: trimmedNote.isEmpty ? nil : trimmedNote,
                     checkedIn: checkInNow,
-                    tableIDs: selectedTableIDs.isEmpty ? nil : selectedTableIDs.sorted()
+                    tableIDs: selectedTableIDs.isEmpty ? nil : selectedTableIDs.sorted(),
+                    walkInQueueEntryID: queueEntryID
                 )
             )
             result = created
@@ -103,6 +107,8 @@ struct WalkInPrefill {
     var note: String? = nil
     /// Başlıkta gösterilen kaynak açıklaması.
     var sourceTitle: String? = nil
+    /// Kapı sırası kaydı; verilirse walk-in oluşturulurken sıra kaydı da oturtuldu olarak kapanır.
+    var queueEntryID: Int? = nil
 }
 
 /// Kapıdan gelen misafir için hızlı rezervasyon + check-in.
